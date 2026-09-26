@@ -1,0 +1,6 @@
+{
+  "name": "CampusGate - University Access & Device Management",
+  "description": "Centralized personal device verification, cross-gate movement tracking, and campus security access system with Amharic-first gate operations.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
