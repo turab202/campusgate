@@ -47,7 +47,7 @@ export const DemoGuideBanner: React.FC = () => {
     },
     {
       num: 3,
-      title: 'DEMO 3: Cross-Gate Return (Gate 3)',
+      title: 'DEMO 3: Cross-Gate Return - Gate 3',
       desc: 'Student returns via Gate 3! Officer scans laptop: system detects prior exit from Gate 1. No new enrollment needed!',
       gate: 'Gate 3',
       icon: MapPin,

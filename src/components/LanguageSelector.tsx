@@ -1,147 +1,181 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Globe, Check, ChevronDown } from 'lucide-react';
+import { Globe, Check, ChevronDown, Sparkles } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Language } from '../i18n/translations';
 
 export const LanguageSelector: React.FC = () => {
-  const { language, setLanguage, t } = useApp();
+  const { language, setLanguage } = useApp();
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdown on click outside or escape key
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  const languages: {
-    code: Language;
-    name: string;
-    nativeName: string;
-    subtext: string;
-    badge: string;
-  }[] = [
-    {
-      code: 'am',
-      name: 'Amharic',
-      nativeName: 'አማርኛ',
-      subtext: 'የስራ ቋንቋ • Officer Operations',
-      badge: 'አማ'
-    },
-    {
-      code: 'en',
-      name: 'English',
-      nativeName: 'English (US)',
-      subtext: 'Campus Standard • Bilingual',
-      badge: 'EN'
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handlePointerDown);
+      document.addEventListener('touchstart', handlePointerDown);
+      document.addEventListener('keydown', handleKeyDown);
     }
-  ];
 
-  const currentLangObj = languages.find((l) => l.code === language) || languages[0];
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const selectLanguage = (code: 'en' | 'am') => {
+    setLanguage(code);
+    setIsOpen(false);
+  };
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
-      {/* Advanced Trigger Button */}
+    <div className="relative inline-block text-left" ref={containerRef}>
+      {/* Icon-Driven Trigger Button */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`group inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all duration-200 cursor-pointer shadow-sm ${
-          isOpen
-            ? 'bg-purple-800 text-white border-purple-400 ring-2 ring-purple-400/30'
-            : 'bg-purple-900/90 text-purple-100 border-purple-700/80 hover:bg-purple-800 hover:text-white hover:border-purple-500'
-        }`}
+        onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="true"
         aria-expanded={isOpen}
+        aria-label="Select language"
+        className={`inline-flex items-center space-x-2 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-xs focus:outline-hidden focus:ring-2 focus:ring-purple-400 ${
+          isOpen
+            ? 'bg-purple-900 border-purple-400 text-white shadow-purple-900/30'
+            : 'bg-purple-900/70 hover:bg-purple-800/90 border-purple-700/80 text-purple-200 hover:text-white'
+        }`}
+        title={language === 'am' ? 'ቋንቋ ቀይር (አማርኛ)' : 'Change Language (English)'}
       >
-        <div className="w-5 h-5 rounded-lg bg-purple-950/70 border border-purple-700/60 flex items-center justify-center text-purple-300 group-hover:text-purple-100 transition-colors">
-          <Globe className="w-3.5 h-3.5 text-purple-300 group-hover:text-purple-100 transition-transform duration-300 group-hover:rotate-45" />
+        <div className="w-5 h-5 rounded-lg bg-purple-700/70 border border-purple-500/50 flex items-center justify-center text-purple-200 shrink-0">
+          <Globe className="w-3.5 h-3.5 text-purple-200 animate-pulse" />
         </div>
-        
-        <span className="font-medium tracking-wide">
-          {language === 'am' ? 'አማርኛ' : 'English'}
+        <span className="font-bold tracking-wider uppercase text-[11px] text-white">
+          {language === 'am' ? 'አማ' : 'EN'}
         </span>
-
-        <span className="text-[10px] font-mono uppercase bg-purple-950/80 px-1.5 py-0.5 rounded text-purple-300 border border-purple-800/80">
-          {currentLangObj.badge}
-        </span>
-
         <ChevronDown
-          className={`w-3.5 h-3.5 text-purple-300 transition-transform duration-200 ${
-            isOpen ? 'rotate-180 text-white' : 'group-hover:translate-y-0.5'
+          className={`w-3.5 h-3.5 text-purple-300 transition-transform duration-200 shrink-0 ${
+            isOpen ? 'rotate-180 text-white' : ''
           }`}
         />
       </button>
 
       {/* Advanced Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-2xl bg-white p-2 shadow-2xl border border-purple-200 ring-1 ring-black/5 z-50 animate-in fade-in zoom-in-95 duration-150">
-          <div className="px-3 py-2 border-b border-slate-100 mb-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              {language === 'am' ? 'ቋንቋ ይምረጡ' : 'Select Language'}
-            </span>
-            <span className="text-xs font-semibold text-slate-700">
-              CampusGate Bilingual System
+        <div
+          role="menu"
+          aria-orientation="vertical"
+          className="absolute right-0 top-full mt-2 w-72 rounded-2xl bg-gradient-to-b from-purple-950 via-purple-900 to-indigo-950 border border-purple-700/90 shadow-2xl shadow-purple-950/80 p-2 z-50 animate-in fade-in zoom-in-95 backdrop-blur-xl ring-1 ring-black/40"
+        >
+          {/* Header */}
+          <div className="px-3 py-2 border-b border-purple-800/70 flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <Globe className="w-3.5 h-3.5 text-purple-300" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-purple-200">
+                Language / ቋንቋ
+              </span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-800/80 border border-purple-600/50 text-purple-200 font-medium">
+              Bilingual
             </span>
           </div>
 
-          <div className="space-y-1">
-            {languages.map((item) => {
-              const isSelected = language === item.code;
-              return (
-                <button
-                  key={item.code}
-                  type="button"
-                  onClick={() => {
-                    setLanguage(item.code);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-xs flex items-center justify-between transition-all duration-150 cursor-pointer ${
-                    isSelected
-                      ? 'bg-purple-50 text-purple-950 font-bold border border-purple-200 shadow-xs'
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-purple-900'
+          {/* Options */}
+          <div className="py-1.5 space-y-1">
+            {/* English Option */}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => selectLanguage('en')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer group ${
+                language === 'en'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-900/50 border border-purple-400/40'
+                  : 'text-purple-200 hover:bg-purple-800/60 hover:text-white border border-transparent'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs border ${
+                    language === 'en'
+                      ? 'bg-white text-purple-900 border-white shadow-xs'
+                      : 'bg-purple-950/70 text-purple-300 border-purple-700/80 group-hover:border-purple-500'
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
-                    <span
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold font-mono transition-colors ${
-                        isSelected
-                          ? 'bg-purple-900 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                    <div>
-                      <span className="block text-xs font-bold leading-tight">
-                        {item.nativeName}
-                      </span>
-                      <span className="block text-[10px] text-slate-500 font-normal leading-tight mt-0.5">
-                        {item.subtext}
-                      </span>
-                    </div>
-                  </div>
+                  EN
+                </div>
+                <div>
+                  <p className="text-sm font-bold leading-none text-white">English</p>
+                  <p
+                    className={`text-[10px] mt-1 font-medium ${
+                      language === 'en' ? 'text-purple-100' : 'text-purple-300/80'
+                    }`}
+                  >
+                    Campus Security Operations
+                  </p>
+                </div>
+              </div>
+              {language === 'en' && (
+                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+              )}
+            </button>
 
-                  {isSelected && (
-                    <div className="w-5 h-5 rounded-full bg-purple-900 text-white flex items-center justify-center shrink-0">
-                      <Check className="w-3 h-3 stroke-[3]" />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
+            {/* Amharic Option */}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => selectLanguage('am')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer group ${
+                language === 'am'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-900/50 border border-purple-400/40'
+                  : 'text-purple-200 hover:bg-purple-800/60 hover:text-white border border-transparent'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs border ${
+                    language === 'am'
+                      ? 'bg-white text-purple-900 border-white shadow-xs'
+                      : 'bg-purple-950/70 text-purple-300 border-purple-700/80 group-hover:border-purple-500'
+                  }`}
+                >
+                  አማ
+                </div>
+                <div>
+                  <p className="text-sm font-bold leading-none text-white">አማርኛ (Amharic)</p>
+                  <p
+                    className={`text-[10px] mt-1 font-medium ${
+                      language === 'am' ? 'text-purple-100' : 'text-purple-300/80'
+                    }`}
+                  >
+                    የስራ ቋንቋ • ኦፊሰር ኦፕሬሽንስ
+                  </p>
+                </div>
+              </div>
+              {language === 'am' && (
+                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+              )}
+            </button>
           </div>
 
-          <div className="mt-2 pt-2 border-t border-slate-100 px-3 py-1">
-            <p className="text-[10px] text-slate-400 leading-snug">
-              {language === 'am'
-                ? 'የበር ጠባቂ መኮንኖች በነባሪነት በአማርኛ ቋንቋ እንዲጠቀሙ ተዘጋጅቷል።'
-                : 'Gate Officers are initialized in Amharic-first mode per security protocols.'}
-            </p>
+          {/* Micro Footer Note */}
+          <div className="px-3 py-2 mt-1 border-t border-purple-800/60 flex items-center justify-between text-[10px] text-purple-300/80 bg-purple-950/40 rounded-xl">
+            <span className="flex items-center space-x-1">
+              <Sparkles className="w-3 h-3 text-amber-300" />
+              <span>Real-Time Sync</span>
+            </span>
+            <span>ASTU Gate System</span>
           </div>
         </div>
       )}

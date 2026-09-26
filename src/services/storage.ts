@@ -24,16 +24,16 @@ import {
 } from './mockData';
 
 const STORAGE_KEYS = {
-  DEVICES: 'campusgate_devices_v1',
-  MOVEMENTS: 'campusgate_movements_v1',
-  GATES: 'campusgate_gates_v1',
-  OFFICERS: 'campusgate_officers_v1',
-  SHIFTS: 'campusgate_shifts_v1',
-  STUDENTS: 'campusgate_students_v1',
-  VISITORS: 'campusgate_visitors_v1',
-  INCIDENTS: 'campusgate_incidents_v1',
-  REQUESTS: 'campusgate_requests_v1',
-  AUDIT: 'campusgate_audit_v1'
+  DEVICES: 'campusgate_devices_v3',
+  MOVEMENTS: 'campusgate_movements_v3',
+  GATES: 'campusgate_gates_v3',
+  OFFICERS: 'campusgate_officers_v3',
+  SHIFTS: 'campusgate_shifts_v3',
+  STUDENTS: 'campusgate_students_v3',
+  VISITORS: 'campusgate_visitors_v3',
+  INCIDENTS: 'campusgate_incidents_v3',
+  REQUESTS: 'campusgate_requests_v3',
+  AUDIT: 'campusgate_audit_v3'
 };
 
 function loadFromStorage<T>(key: string, fallback: T): T {
@@ -440,7 +440,7 @@ class CampusGateStore {
       title: `Lost Device Alert: ${dev.brand} ${dev.model} (${dev.assetId})`,
       description: `Owner ${dev.ownerName} reported device lost. Serial: ${dev.serialNumber}. All gates are on security alert.`,
       gateId: dev.lastMovement?.gateId || 'gate-1',
-      gateName: dev.lastMovement?.gateName || 'Gate 1 (Main Entrance)',
+      gateName: dev.lastMovement?.gateName || 'Gate 1',
       officerBadge: 'SYSTEM-ALERT',
       deviceAssetId: dev.assetId,
       deviceSerial: dev.serialNumber,
@@ -456,7 +456,7 @@ class CampusGateStore {
       resourceType: 'DEVICE',
       resourceId: `${dev.assetId} (${dev.brand} ${dev.model})`,
       gateId: dev.lastMovement?.gateId || 'gate-1',
-      gateName: dev.lastMovement?.gateName || 'Gate 1 (Main Entrance)',
+      gateName: dev.lastMovement?.gateName || 'Gate 1',
       details: `Student ${studentName} flagged personal device as LOST. Immediate alert disseminated across all campus gates.`,
       result: 'WARNING'
     });
@@ -500,7 +500,12 @@ class CampusGateStore {
 
   // --- Gates & Shifts ---
   public getGates(): Gate[] {
-    return [...this.gates];
+    return this.gates.map((g) => {
+      if (g.id === 'gate-1') return { ...g, name: 'Gate 1', nameAmharic: 'በር 1' };
+      if (g.id === 'gate-2') return { ...g, name: 'Gate 2', nameAmharic: 'በር 2' };
+      if (g.id === 'gate-3') return { ...g, name: 'Gate 3', nameAmharic: 'በር 3' };
+      return g;
+    });
   }
 
   public getShifts(): GateShift[] {

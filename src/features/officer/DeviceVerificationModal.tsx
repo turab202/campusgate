@@ -94,7 +94,7 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
   }
 
   // Cross-gate calculation
-  const lastExitGateName = device.lastMovement?.gateName || 'Gate 1 (Main Entrance)';
+  const lastExitGateName = device.lastMovement?.gateName || 'Gate 1';
   const isCrossGateReturn =
     device.status === 'OUTSIDE_CAMPUS' &&
     device.lastMovement?.gateId &&

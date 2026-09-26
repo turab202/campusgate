@@ -91,8 +91,8 @@ export const initialGates: Gate[] = [
   {
     id: 'gate-1',
     code: 'GATE-01',
-    name: 'Gate 1 (Main Entrance)',
-    nameAmharic: 'በር 1 (ዋና መግቢያ በር)',
+    name: 'Gate 1',
+    nameAmharic: 'በር 1',
     locationDescription: 'Main Ring Road, Boulevard Entrance & Vehicle Gate',
     status: 'ACTIVE',
     currentAssignedOfficer: {
@@ -111,8 +111,8 @@ export const initialGates: Gate[] = [
   {
     id: 'gate-2',
     code: 'GATE-02',
-    name: 'Gate 2 (North Academic Gate)',
-    nameAmharic: 'በር 2 (ሰሜን አካዳሚክ በር)',
+    name: 'Gate 2',
+    nameAmharic: 'በር 2',
     locationDescription: 'North Campus, Library & Science Complex Pedestrian Access',
     status: 'ACTIVE',
     currentAssignedOfficer: {
@@ -131,8 +131,8 @@ export const initialGates: Gate[] = [
   {
     id: 'gate-3',
     code: 'GATE-03',
-    name: 'Gate 3 (South Hostel & Tech Gate)',
-    nameAmharic: 'በር 3 (ደቡብ ዶርም እና ቴክኖሎጂ በር)',
+    name: 'Gate 3',
+    nameAmharic: 'በር 3',
     locationDescription: 'South Perimeter, Student Dormitories & Engineering Workshops',
     status: 'ACTIVE',
     currentAssignedOfficer: {
@@ -209,7 +209,7 @@ export const initialShifts: GateShift[] = [
   {
     id: 'shift-1',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
+    gateName: 'Gate 1',
     shiftName: 'Morning Duty',
     shiftNameAmharic: 'የጠዋት ፈረቃ',
     timeRange: '08:00 — 16:00',
@@ -221,7 +221,7 @@ export const initialShifts: GateShift[] = [
   {
     id: 'shift-2',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
+    gateName: 'Gate 1',
     shiftName: 'Evening Duty',
     shiftNameAmharic: 'የከሰዓት ፈረቃ',
     timeRange: '16:00 — 00:00',
@@ -233,7 +233,7 @@ export const initialShifts: GateShift[] = [
   {
     id: 'shift-3',
     gateId: 'gate-3',
-    gateName: 'Gate 3 (South Hostel & Tech Gate)',
+    gateName: 'Gate 3',
     shiftName: 'Morning Duty',
     shiftNameAmharic: 'የጠዋት ፈረቃ',
     timeRange: '08:00 — 16:00',
@@ -245,7 +245,7 @@ export const initialShifts: GateShift[] = [
   {
     id: 'shift-4',
     gateId: 'gate-2',
-    gateName: 'Gate 2 (North Academic Gate)',
+    gateName: 'Gate 2',
     shiftName: 'Morning Duty',
     shiftNameAmharic: 'የጠዋት ፈረቃ',
     timeRange: '08:00 — 16:00',
@@ -278,7 +278,7 @@ export const initialDevices: Device[] = [
       id: 'mov-101',
       type: 'CHECK_IN',
       gateId: 'gate-3',
-      gateName: 'Gate 3 (South Hostel & Tech Gate)',
+      gateName: 'Gate 3',
       officerBadge: 'GO-017',
       officerName: 'Tsegaye Haile',
       timestamp: 'Today, 10:42 AM'
@@ -305,7 +305,7 @@ export const initialDevices: Device[] = [
       id: 'mov-102',
       type: 'CHECK_OUT',
       gateId: 'gate-1',
-      gateName: 'Gate 1 (Main Entrance)',
+      gateName: 'Gate 1',
       officerBadge: 'GO-023',
       officerName: 'Almaz Bekele',
       timestamp: 'Yesterday, 4:32 PM'
@@ -331,14 +331,14 @@ export const initialDevices: Device[] = [
     lostReportDetails: {
       reportedAt: '2026-09-25 18:20 PM',
       reportedBy: 'Hana Tesfaye',
-      lastKnownGate: 'Gate 2 (North Academic Gate)',
+      lastKnownGate: 'Gate 2',
       notes: 'Reported lost after studying in Computer Science lab 3B.'
     },
     lastMovement: {
       id: 'mov-103',
       type: 'CHECK_IN',
       gateId: 'gate-2',
-      gateName: 'Gate 2 (North Academic Gate)',
+      gateName: 'Gate 2',
       officerBadge: 'GO-011',
       officerName: 'Yared Lemma',
       timestamp: '2026-09-25, 01:15 PM'
@@ -365,7 +365,7 @@ export const initialDevices: Device[] = [
       id: 'mov-104',
       type: 'CHECK_OUT',
       gateId: 'gate-1',
-      gateName: 'Gate 1 (Main Entrance)',
+      gateName: 'Gate 1',
       officerBadge: 'GO-023',
       officerName: 'Almaz Bekele',
       timestamp: 'Today, 08:45 AM'
@@ -392,7 +392,7 @@ export const initialDevices: Device[] = [
       id: 'mov-105',
       type: 'CHECK_IN',
       gateId: 'gate-1',
-      gateName: 'Gate 1 (Main Entrance)',
+      gateName: 'Gate 1',
       officerBadge: 'GO-023',
       officerName: 'Almaz Bekele',
       timestamp: 'Today, 09:12 AM'
@@ -419,7 +419,7 @@ export const initialDevices: Device[] = [
       id: 'mov-106',
       type: 'CHECK_IN',
       gateId: 'gate-3',
-      gateName: 'Gate 3 (South Hostel & Tech Gate)',
+      gateName: 'Gate 3',
       officerBadge: 'GO-017',
       officerName: 'Tsegaye Haile',
       timestamp: 'Yesterday, 06:10 PM'
@@ -439,8 +439,8 @@ export const initialMovements: MovementTransaction[] = [
     ownerName: 'Zahra Mustefa',
     type: 'CHECK_IN',
     gateId: 'gate-3',
-    gateName: 'Gate 3 (South Hostel & Tech Gate)',
-    gateNameAmharic: 'በር 3 (ደቡብ ዶርም እና ቴክኖሎጂ በር)',
+    gateName: 'Gate 3',
+    gateNameAmharic: 'በር 3',
     officerBadge: 'GO-017',
     officerName: 'Tsegaye Haile',
     timestamp: 'Today, 10:42 AM',
@@ -460,8 +460,8 @@ export const initialMovements: MovementTransaction[] = [
     ownerName: 'Zahra Mustefa',
     type: 'CHECK_OUT',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
-    gateNameAmharic: 'በር 1 (ዋና መግቢያ በር)',
+    gateName: 'Gate 1',
+    gateNameAmharic: 'በር 1',
     officerBadge: 'GO-023',
     officerName: 'Almaz Bekele',
     timestamp: 'Yesterday, 4:21 PM',
@@ -480,8 +480,8 @@ export const initialMovements: MovementTransaction[] = [
     ownerName: 'Abebe Kebede',
     type: 'CHECK_OUT',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
-    gateNameAmharic: 'በር 1 (ዋና መግቢያ በር)',
+    gateName: 'Gate 1',
+    gateNameAmharic: 'በር 1',
     officerBadge: 'GO-023',
     officerName: 'Almaz Bekele',
     timestamp: 'Yesterday, 4:32 PM',
@@ -500,8 +500,8 @@ export const initialMovements: MovementTransaction[] = [
     ownerName: 'Mohammed Ahmed',
     type: 'CHECK_OUT',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
-    gateNameAmharic: 'በር 1 (ዋና መግቢያ በር)',
+    gateName: 'Gate 1',
+    gateNameAmharic: 'በር 1',
     officerBadge: 'GO-023',
     officerName: 'Almaz Bekele',
     timestamp: 'Today, 08:45 AM',
@@ -520,8 +520,8 @@ export const initialMovements: MovementTransaction[] = [
     ownerName: 'Meron Getachew',
     type: 'CHECK_IN',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
-    gateNameAmharic: 'በር 1 (ዋና መግቢያ በር)',
+    gateName: 'Gate 1',
+    gateNameAmharic: 'በር 1',
     officerBadge: 'GO-023',
     officerName: 'Almaz Bekele',
     timestamp: 'Today, 09:12 AM',
@@ -547,7 +547,7 @@ export const initialVisitors: VisitorPass[] = [
     status: 'INSIDE',
     checkInTime: 'Today, 09:40 AM',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
+    gateName: 'Gate 1',
     officerBadge: 'GO-023',
     qrPayload: 'VP-2026-8812'
   },
@@ -580,7 +580,7 @@ export const initialVisitors: VisitorPass[] = [
     checkInTime: 'Today, 08:15 AM',
     checkOutTime: 'Today, 11:50 AM',
     gateId: 'gate-3',
-    gateName: 'Gate 3 (South Hostel & Tech Gate)',
+    gateName: 'Gate 3',
     officerBadge: 'GO-017',
     qrPayload: 'VP-2026-8809'
   }
@@ -594,7 +594,7 @@ export const initialIncidents: SecurityIncident[] = [
     title: 'Reported Lost Dell XPS 13 Flagged on Registry',
     description: 'Student Hana Tesfaye flagged Dell XPS 13 (Asset: CG-DEV-005112, Serial: 8J2M144K90) as misplaced in campus library.',
     gateId: 'gate-2',
-    gateName: 'Gate 2 (North Academic Gate)',
+    gateName: 'Gate 2',
     officerBadge: 'GO-011',
     deviceAssetId: 'CG-DEV-005112',
     deviceSerial: '8J2M144K90',
@@ -611,7 +611,7 @@ export const initialIncidents: SecurityIncident[] = [
     title: 'Serial Number Discrepancy on Laptop Base',
     description: 'Student presented a laptop whose chassis sticker matched, but BIOS internal serial diverged from enrolled system record.',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
+    gateName: 'Gate 1',
     officerBadge: 'GO-023',
     studentId: 'ASTU-2024-09918',
     studentName: 'Binyam Alemu',
@@ -666,7 +666,7 @@ export const initialAuditLogs: AuditLog[] = [
     resourceType: 'DEVICE',
     resourceId: 'CG-DEV-004821 (Lenovo ThinkPad T14)',
     gateId: 'gate-3',
-    gateName: 'Gate 3 (South Hostel & Tech Gate)',
+    gateName: 'Gate 3',
     details: 'Verified entry after prior exit from Gate 1. Physical serial verified PF123456.',
     result: 'SUCCESS'
   },
@@ -679,7 +679,7 @@ export const initialAuditLogs: AuditLog[] = [
     resourceType: 'VISITOR',
     resourceId: 'VP-2026-8812 (Dawit Mengesha)',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
+    gateName: 'Gate 1',
     details: 'National ID verified; visiting Dr. Girma Hailu for Senior Project Defense.',
     result: 'SUCCESS'
   },
@@ -692,7 +692,7 @@ export const initialAuditLogs: AuditLog[] = [
     resourceType: 'DEVICE',
     resourceId: 'CG-DEV-004101 (HP EliteBook 840)',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
+    gateName: 'Gate 1',
     details: 'Verified entry through serial lookup 5CD9280J9X.',
     result: 'SUCCESS'
   },
@@ -705,7 +705,7 @@ export const initialAuditLogs: AuditLog[] = [
     resourceType: 'DEVICE',
     resourceId: 'CG-DEV-002844 (iPad Pro 12.9)',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
+    gateName: 'Gate 1',
     details: 'Student Mohammed Ahmed checked out with tablet.',
     result: 'SUCCESS'
   },
@@ -718,7 +718,7 @@ export const initialAuditLogs: AuditLog[] = [
     resourceType: 'DEVICE',
     resourceId: 'CG-DEV-005112 (Dell XPS 13)',
     gateId: 'gate-2',
-    gateName: 'Gate 2 (North Academic Gate)',
+    gateName: 'Gate 2',
     details: 'Device reported lost by owner. Security alert broadcast to all gates.',
     result: 'WARNING'
   },
@@ -731,7 +731,7 @@ export const initialAuditLogs: AuditLog[] = [
     resourceType: 'DEVICE',
     resourceId: 'CG-DEV-003190 (MacBook Pro 14)',
     gateId: 'gate-1',
-    gateName: 'Gate 1 (Main Entrance)',
+    gateName: 'Gate 1',
     details: 'Student Abebe Kebede checked out for study off campus.',
     result: 'SUCCESS'
   }
