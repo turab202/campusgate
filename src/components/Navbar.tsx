@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import {
-  Shield,
+  ShieldCheck,
   Bell,
   MapPin,
   LogOut,
   GraduationCap,
-  ShieldCheck,
   UserCheck
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -23,35 +22,38 @@ export const Navbar: React.FC = () => {
     setCurrentGateId
   } = useApp();
 
-  const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const gates = campusStore.getGates();
   const incidents = campusStore.getIncidents();
-  const openIncidentsCount = incidents.filter((i) => i.status === 'OPEN').length;
+  const openCount = incidents.filter((i) => i.status === 'OPEN').length;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm text-slate-900 border-b border-slate-200 shadow-[0_1px_0_rgba(15,23,42,0.04)] select-none">
+    <header className="sticky top-0 z-40 border-b border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-soft)] select-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
-        <div className="flex items-center space-x-2.5 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-white">
-            <Shield className="w-4 h-4" />
+        {/* Brand */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--cg-primary)] text-white">
+            <ShieldCheck className="h-4 w-4" />
           </div>
-          <span className="font-bold text-lg tracking-tight text-slate-900">
-            {t('brandName')}
+          <span className="font-semibold text-base tracking-tight text-[var(--cg-text)]">
+            CampusGate
           </span>
         </div>
 
+        {/* Gate selector for officers */}
         {role === 'OFFICER' && currentUser && (
-          <div className="hidden sm:flex items-center bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 space-x-2 text-xs">
-            <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-            <span className="text-slate-600 font-medium text-[11px]">{t('currentGate')}:</span>
+          <div className="hidden sm:flex items-center gap-2 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-2.5 py-1.5 text-xs">
+            <MapPin className="h-3.5 w-3.5 text-[var(--cg-text-muted)] shrink-0" />
+            <span className="text-[var(--cg-text-muted)] font-medium text-[11px]">{t('currentGate')}:</span>
             <select
               value={currentGateId}
               onChange={(e) => setCurrentGateId(e.target.value)}
-              className="bg-transparent text-slate-900 font-semibold text-xs focus:outline-none cursor-pointer"
+              className="bg-transparent text-[var(--cg-text)] font-semibold text-xs focus:outline-none cursor-pointer"
+              aria-label="Select gate"
             >
               {gates.map((g) => (
-                <option key={g.id} value={g.id} className="bg-white text-slate-900">
+                <option key={g.id} value={g.id}>
                   {language === 'am' ? g.nameAmharic : g.name}
                 </option>
               ))}
@@ -59,57 +61,58 @@ export const Navbar: React.FC = () => {
           </div>
         )}
 
-        <div className="flex items-center space-x-2">
+        {/* Right controls */}
+        <div className="flex items-center gap-2">
           <LanguageSelector />
 
+          {/* Notifications */}
           <div className="relative">
             <button
-              onClick={() => setShowNotificationMenu(!showNotificationMenu)}
-              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors relative border border-transparent hover:border-slate-200 cursor-pointer"
-              title="Notifications"
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative rounded-lg border border-transparent p-1.5 text-[var(--cg-text-muted)] transition-colors hover:border-[var(--cg-border)] hover:bg-[var(--cg-surface-muted)] hover:text-[var(--cg-text)]"
+              aria-label="Notifications"
             >
-              <Bell className="w-4 h-4" />
-              {openIncidentsCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rose-500 rounded-full" />
+              <Bell className="h-4 w-4" />
+              {openCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-[var(--cg-danger)]" />
               )}
             </button>
 
-            {showNotificationMenu && (
+            {showNotifications && (
               <div
-                className="absolute right-0 mt-2 w-72 bg-white text-slate-800 rounded-xl shadow-lg border border-slate-200 p-3 z-50"
-                onMouseLeave={() => setShowNotificationMenu(false)}
+                className="absolute right-0 mt-2 w-72 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] z-50"
+                onMouseLeave={() => setShowNotifications(false)}
               >
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-xs font-bold text-slate-700">
-                  <span>{t('navNotifications')}</span>
-                  <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded font-mono">
-                    {openIncidentsCount} Active
+                <div className="flex items-center justify-between border-b border-[var(--cg-border)] px-3 py-2">
+                  <span className="text-xs font-semibold text-[var(--cg-text)]">{t('navNotifications')}</span>
+                  <span className="rounded bg-[var(--cg-surface-muted)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--cg-text-muted)]">
+                    {openCount} active
                   </span>
                 </div>
-                <div className="py-2 space-y-1.5 text-xs">
-                  <div className="p-2 bg-rose-50 border border-rose-200 rounded-lg">
-                    <span className="font-bold text-rose-700 block text-[11px]">Lost Device Alert</span>
-                    <span className="text-slate-600 text-[10px] block">
-                      Dell XPS 13 reported lost and requires review.
-                    </span>
-                  </div>
-                  <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
-                    <span className="font-bold text-slate-800 block text-[11px]">Exit Pass Validated</span>
-                    <span className="text-slate-600 text-[10px] block">
-                      Access record approved for the current check-out window.
-                    </span>
-                  </div>
+                <div className="p-2 space-y-1.5 text-xs">
+                  {openCount > 0 ? (
+                    <div className="rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2.5">
+                      <span className="block font-semibold text-[var(--cg-danger)] text-[11px]">Lost Device Alert</span>
+                      <span className="block text-[var(--cg-text-muted)] text-[10px] mt-0.5">
+                        Dell XPS 13 reported lost — requires review.
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="px-2 py-3 text-center text-[var(--cg-text-muted)]">No active alerts</p>
+                  )}
                 </div>
               </div>
             )}
           </div>
 
+          {/* User info + logout */}
           {currentUser && (
-            <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
-              <div className="hidden sm:flex items-center space-x-1.5 text-xs">
-                {role === 'OFFICER' && <UserCheck className="w-3.5 h-3.5 text-slate-500" />}
-                {role === 'STUDENT' && <GraduationCap className="w-3.5 h-3.5 text-slate-500" />}
-                {role === 'ADMIN' && <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />}
-                <span className="font-semibold text-slate-700 truncate max-w-[120px]">
+            <div className="flex items-center gap-2 pl-2 border-l border-[var(--cg-border)]">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs">
+                {role === 'OFFICER' && <UserCheck className="h-3.5 w-3.5 text-[var(--cg-text-muted)]" />}
+                {role === 'STUDENT' && <GraduationCap className="h-3.5 w-3.5 text-[var(--cg-text-muted)]" />}
+                {role === 'ADMIN' && <ShieldCheck className="h-3.5 w-3.5 text-[var(--cg-text-muted)]" />}
+                <span className="font-semibold text-[var(--cg-text)] truncate max-w-[120px]">
                   {currentUser.name}
                 </span>
               </div>
@@ -117,9 +120,10 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={logout}
                 title={t('signOut')}
-                className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200 cursor-pointer"
+                aria-label={t('signOut')}
+                className="rounded-lg border border-transparent p-1.5 text-[var(--cg-text-muted)] transition-colors hover:border-[var(--cg-border)] hover:bg-[var(--cg-surface-muted)] hover:text-[var(--cg-text)]"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="h-3.5 w-3.5" />
               </button>
             </div>
           )}

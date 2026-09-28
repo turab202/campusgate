@@ -48,7 +48,7 @@ const AppContent: React.FC = () => {
           <div className="flex items-center gap-2 text-sm">
             <span className="font-semibold text-[var(--cg-text)]">CampusGate</span>
             <span className="text-[var(--cg-border)]">•</span>
-            <span className="text-xs text-[var(--cg-text-muted)]">University Access & Security Operations</span>
+            <span className="text-xs text-[var(--cg-text-muted)]">University Access &amp; Security Operations</span>
           </div>
           <div className="text-xs text-[var(--cg-text-muted)]">
             Access management · asset control · gate operations

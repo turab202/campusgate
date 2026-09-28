@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
 import {
-  AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  Laptop,
-  MapPin,
-  Shield,
-  ShieldAlert,
-  User,
-  X,
-  FileWarning
+  AlertTriangle, ArrowRight, CheckCircle2, Clock,
+  Laptop, MapPin, ShieldAlert, User, X, FileWarning
 } from 'lucide-react';
 import { Device, Student } from '../../types';
 import { useApp } from '../../context/AppContext';
@@ -29,14 +19,9 @@ interface DeviceVerificationModalProps {
 }
 
 export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = ({
-  device,
-  isOpen,
-  onClose,
-  onEnrollNew,
-  isUnknown = false,
-  searchedTerm = '',
-  isOwnerMismatch = false,
-  presentedStudent = null
+  device, isOpen, onClose, onEnrollNew,
+  isUnknown = false, searchedTerm = '',
+  isOwnerMismatch = false, presentedStudent = null
 }) => {
   const { t, language, currentGate, activeOfficer, showToast } = useApp();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -46,63 +31,54 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
 
   if (!isOpen) return null;
 
-  // Unknown Device State
+  // Unknown device state
   if (isUnknown || !device) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-xs">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
-          <div className="bg-amber-600 text-white p-5 flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <AlertTriangle className="w-6 h-6 text-amber-100" />
-              <h3 className="font-bold text-lg">{t('deviceNotFound')}</h3>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] overflow-hidden">
+          <div className="flex items-center justify-between border-b border-[var(--cg-border)] bg-amber-50 px-5 py-4">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="h-5 w-5 text-[var(--cg-warning)]" />
+              <h3 className="font-semibold text-[var(--cg-text)]">{t('deviceNotFound')}</h3>
             </div>
-            <button onClick={onClose} className="p-1 rounded-lg hover:bg-amber-700 text-amber-200 hover:text-white">
-              <X className="w-5 h-5" />
+            <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)]">
+              <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="p-6">
-            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 mb-5">
-              <p className="text-sm font-semibold text-amber-950 mb-1">
-                {searchedTerm ? `Searched: "${searchedTerm}"` : 'Unknown Asset / Barcode'}
-              </p>
-              <p className="text-xs text-amber-800 leading-relaxed">
-                {t('deviceNotFoundDesc')}
-              </p>
+          <div className="p-5 space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+              {searchedTerm && (
+                <p className="text-sm font-semibold text-amber-900 mb-1">Searched: &quot;{searchedTerm}&quot;</p>
+              )}
+              <p className="text-xs text-amber-800 leading-relaxed">{t('deviceNotFoundDesc')}</p>
             </div>
-            <div className="space-y-3">
-              <button
-                onClick={() => {
-                  onClose();
-                  if (onEnrollNew) onEnrollNew(searchedTerm);
-                }}
-                className="w-full py-3 px-4 rounded-xl bg-purple-900 text-white font-bold text-sm hover:bg-purple-800 transition-colors shadow-md flex items-center justify-center space-x-2"
-              >
-                <span>{t('enrollDeviceNow')}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs hover:bg-slate-200 transition-colors"
-              >
-                {t('cancel')}
-              </button>
-            </div>
+            <button
+              onClick={() => { onClose(); if (onEnrollNew) onEnrollNew(searchedTerm); }}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors"
+            >
+              {t('enrollDeviceNow')}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full rounded-lg border border-[var(--cg-border)] py-2.5 text-sm font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors"
+            >
+              {t('cancel')}
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  // Cross-gate calculation
-  const lastExitGateName = device.lastMovement?.gateName || 'Gate 1';
-  const isCrossGateReturn =
-    device.status === 'OUTSIDE_CAMPUS' &&
-    device.lastMovement?.gateId &&
-    device.lastMovement.gateId !== currentGate.id;
-
   const isLost = device.status === 'LOST';
   const isInside = device.status === 'INSIDE_CAMPUS';
   const isOutside = device.status === 'OUTSIDE_CAMPUS';
+  const lastExitGateName = device.lastMovement?.gateName || 'Gate 1';
+  const isCrossGateReturn =
+    isOutside &&
+    device.lastMovement?.gateId &&
+    device.lastMovement.gateId !== currentGate.id;
 
   const handleCheckOut = () => {
     setIsProcessing(true);
@@ -116,12 +92,7 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
       });
       setIsProcessing(false);
       if (res.success) {
-        showToast(
-          language === 'am'
-            ? `መሳሪያው (${device.assetId}) በ ${currentGate.nameAmharic} በኩል ከግቢ ወጥቷል።`
-            : `Device ${device.assetId} successfully checked out via ${currentGate.name}.`,
-          'success'
-        );
+        showToast(`Device ${device.assetId} checked out via ${currentGate.name}.`, 'success');
         onClose();
       } else {
         showToast(res.message, 'error');
@@ -141,12 +112,7 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
       });
       setIsProcessing(false);
       if (res.success) {
-        showToast(
-          language === 'am'
-            ? `መሳሪያው (${device.assetId}) ወደ ግቢ ገብቷል። የቀድሞ መውጫ: ${lastExitGateName}`
-            : `Device ${device.assetId} checked in at ${currentGate.name}. (Prior exit: ${lastExitGateName})`,
-          'success'
-        );
+        showToast(res.message, 'success');
         onClose();
       } else {
         showToast(res.message, 'error');
@@ -156,9 +122,9 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
 
   const handleLogIncident = () => {
     campusStore.createIncident({
-      type: incidentReason as any,
+      type: incidentReason as Parameters<typeof campusStore.createIncident>[0]['type'],
       title: `Gate Security Incident: ${device.brand} ${device.model} (${device.assetId})`,
-      description: incidentNotes || `Suspicious transaction or flag encountered at ${currentGate.name}.`,
+      description: incidentNotes || `Suspicious transaction at ${currentGate.name}.`,
       gateId: currentGate.id,
       gateName: currentGate.name,
       officerBadge: activeOfficer.officerBadgeId,
@@ -168,313 +134,253 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
       studentName: device.ownerName,
       severity: 'HIGH'
     });
-    showToast('Incident logged into central security registry. Admin alerted.', 'warning');
+    showToast('Incident logged into central security registry.', 'warning');
     setShowIncidentForm(false);
     onClose();
   };
 
+  const headerBg = isLost
+    ? 'bg-[var(--cg-danger)]'
+    : isOwnerMismatch
+    ? 'bg-[var(--cg-warning)]'
+    : 'bg-[var(--cg-primary)]';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-xs overflow-y-auto">
-      <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-purple-200 overflow-hidden animate-in fade-in zoom-in-95 my-8">
-        
-        {/* Dynamic Header according to status */}
-        <div
-          className={`p-5 text-white flex items-center justify-between ${
-            isLost
-              ? 'bg-rose-900 border-b border-rose-800'
-              : isOwnerMismatch
-              ? 'bg-amber-700 border-b border-amber-800'
-              : 'bg-purple-950 border-b border-purple-900'
-          }`}
-        >
-          <div className="flex items-center space-x-3">
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                isLost ? 'bg-rose-800 text-rose-100' : 'bg-purple-800 text-purple-100'
-              }`}
-            >
-              {isLost ? <ShieldAlert className="w-6 h-6 text-rose-200" /> : <Shield className="w-6 h-6 text-purple-300" />}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 overflow-y-auto">
+      <div className="my-8 w-full max-w-xl rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] overflow-hidden">
+
+        {/* Header */}
+        <div className={`flex items-center justify-between px-5 py-4 text-white ${headerBg}`}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
+              {isLost ? <ShieldAlert className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
             </div>
             <div>
-              <h3 className="font-extrabold text-lg leading-tight">
-                {isLost
-                  ? t('lostDeviceAlert')
-                  : isOwnerMismatch
-                  ? t('ownerMismatchAlert')
-                  : t('deviceFound')}
+              <h3 className="font-semibold text-base leading-tight">
+                {isLost ? t('lostDeviceAlert') : isOwnerMismatch ? t('ownerMismatchAlert') : t('deviceFound')}
               </h3>
-              <p className="text-xs text-purple-200 font-mono">
-                {device.assetId} • {device.brand} {device.model}
-              </p>
+              <p className="text-[11px] text-white/70 font-mono">{device.assetId} · {device.brand} {device.model}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/80 hover:text-white">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-white/70 hover:bg-white/15 transition-colors">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-5">
-          {/* CASE 1: LOST DEVICE WARNING BANNER */}
+        <div className="p-5 space-y-4">
+          {/* Lost device warning */}
           {isLost && (
-            <div className="p-4 bg-rose-50 border-2 border-rose-400 rounded-xl text-rose-950 space-y-2 animate-pulse">
-              <div className="flex items-center space-x-2 font-bold text-sm text-rose-900">
-                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
-                <span>{t('lostDeviceAlert')}</span>
+            <div className="rounded-lg border-2 border-[var(--cg-danger)] bg-red-50 p-4 space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-sm text-[var(--cg-danger)]">
+                <AlertTriangle className="h-5 w-5 shrink-0" />
+                {t('lostDeviceAlert')}
               </div>
-              <p className="text-xs text-rose-800 leading-relaxed font-medium">
-                {t('lostDeviceAlertDesc')}
-              </p>
-              <div className="text-xs bg-rose-100/80 p-2.5 rounded-lg border border-rose-300 font-mono text-rose-900">
+              <p className="text-xs text-red-800 leading-relaxed">{t('lostDeviceAlertDesc')}</p>
+              <div className="rounded-lg border border-red-200 bg-red-100 p-2.5 text-xs font-mono text-red-900 space-y-0.5">
                 <div>Reported: {device.lostReportDetails?.reportedAt || 'Recent'}</div>
-                <div>Reported By: {device.ownerName} ({device.ownerStudentId})</div>
-                <div>Last Known Gate: {device.lostReportDetails?.lastKnownGate || 'Unknown'}</div>
+                <div>By: {device.ownerName} ({device.ownerStudentId})</div>
+                <div>Last known gate: {device.lostReportDetails?.lastKnownGate || 'Unknown'}</div>
               </div>
             </div>
           )}
 
-          {/* CASE 2: OWNER MISMATCH WARNING */}
+          {/* Owner mismatch warning */}
           {isOwnerMismatch && (
-            <div className="p-4 bg-amber-50 border-2 border-amber-400 rounded-xl text-amber-950 space-y-2">
-              <div className="flex items-center space-x-2 font-bold text-sm text-amber-900">
-                <FileWarning className="w-5 h-5 text-amber-700 shrink-0" />
-                <span>{t('ownerMismatchAlert')}</span>
+            <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4 space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-sm text-amber-900">
+                <FileWarning className="h-5 w-5 shrink-0" />
+                {t('ownerMismatchAlert')}
               </div>
-              <p className="text-xs text-amber-800">
-                {t('ownerMismatchDesc')}
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-xs bg-amber-100/70 p-2.5 rounded-lg border border-amber-300">
+              <p className="text-xs text-amber-800">{t('ownerMismatchDesc')}</p>
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-amber-200 bg-amber-100 p-2.5 text-xs">
                 <div>
-                  <span className="text-amber-800 block text-[10px] uppercase font-bold">Student Presenting:</span>
-                  <span className="font-semibold text-amber-950">
-                    {presentedStudent ? presentedStudent.name : 'Unknown Bearer'}
-                  </span>
+                  <span className="block text-[10px] font-semibold uppercase text-amber-700">Presenting Student</span>
+                  <span className="font-semibold text-amber-950">{presentedStudent?.name || 'Unknown'}</span>
                 </div>
                 <div>
-                  <span className="text-amber-800 block text-[10px] uppercase font-bold">Registered Legal Owner:</span>
+                  <span className="block text-[10px] font-semibold uppercase text-amber-700">Registered Owner</span>
                   <span className="font-semibold text-amber-950">{device.ownerName}</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* CROSS-GATE HIGHLIGHT NOTIFICATION (Crucial INSA requirement) */}
+          {/* Cross-gate note */}
           {isCrossGateReturn && (
-            <div className="p-3.5 bg-indigo-50 border border-indigo-300 rounded-xl text-indigo-950 flex items-start space-x-3">
-              <MapPin className="w-5 h-5 text-indigo-700 shrink-0 mt-0.5" />
-              <div className="text-xs leading-relaxed">
-                <span className="font-bold text-indigo-900 block mb-0.5">
-                  {language === 'am' ? 'የተለያየ በር ቅብብሎሽ (Cross-Gate Return)' : 'Cross-Gate Return Movement'}
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--cg-info)] bg-sky-50 p-3.5">
+              <MapPin className="h-4 w-4 text-[var(--cg-info)] shrink-0 mt-0.5" />
+              <div className="text-xs leading-relaxed text-sky-900">
+                <span className="block font-semibold mb-0.5">
+                  {language === 'am' ? 'የተለያየ በር ቅብብሎሽ' : 'Cross-Gate Return Movement'}
                 </span>
-                <span>
-                  {t('crossGateReturnNote', {
-                    prevGate: lastExitGateName,
-                    time: device.lastMovement?.timestamp || 'recently',
-                    currGate: currentGate.name
-                  })}
-                </span>
+                {t('crossGateReturnNote', {
+                  prevGate: lastExitGateName,
+                  time: device.lastMovement?.timestamp || 'recently',
+                  currGate: currentGate.name
+                })}
               </div>
             </div>
           )}
 
-          {/* Physical Device Specification Sheet */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-3">
-            <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200">
+          {/* Device spec sheet */}
+          <div className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-4 text-xs space-y-3">
+            <div className="grid grid-cols-2 gap-3 pb-3 border-b border-[var(--cg-border)]">
               <div>
-                <span className="text-slate-500 block uppercase font-medium text-[10px]">{t('registeredOwner')}</span>
-                <span className="font-bold text-slate-900 text-sm mt-0.5 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-purple-700" />
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{t('registeredOwner')}</span>
+                <span className="mt-0.5 flex items-center gap-1.5 font-semibold text-sm text-[var(--cg-text)]">
+                  <User className="h-3.5 w-3.5 text-[var(--cg-primary)]" />
                   {device.ownerName}
                 </span>
-                <span className="text-[11px] font-mono text-purple-900 block">{device.ownerStudentId}</span>
+                <span className="block font-mono text-[11px] text-[var(--cg-primary)]">{device.ownerStudentId}</span>
               </div>
               <div>
-                <span className="text-slate-500 block uppercase font-medium text-[10px]">{t('deviceModel')}</span>
-                <span className="font-bold text-slate-900 text-sm mt-0.5 flex items-center gap-1.5">
-                  <Laptop className="w-3.5 h-3.5 text-purple-700" />
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{t('deviceModel')}</span>
+                <span className="mt-0.5 flex items-center gap-1.5 font-semibold text-sm text-[var(--cg-text)]">
+                  <Laptop className="h-3.5 w-3.5 text-[var(--cg-primary)]" />
                   {device.brand} {device.model}
                 </span>
-                <span className="text-[11px] text-slate-600 block">{device.deviceType}</span>
+                <span className="block text-[11px] text-[var(--cg-text-muted)]">{device.deviceType}</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="text-slate-500 block uppercase font-medium text-[10px]">{t('serialNumber')}</span>
-                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-300 inline-block mt-0.5">
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{t('serialNumber')}</span>
+                <span className="mt-0.5 inline-block rounded border border-[var(--cg-border)] bg-[var(--cg-surface)] px-2 py-0.5 font-mono font-semibold text-[var(--cg-text)]">
                   {device.serialNumber}
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 block uppercase font-medium text-[10px]">{t('assetId')}</span>
-                <span className="font-mono font-bold text-purple-950 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 inline-block mt-0.5">
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{t('assetId')}</span>
+                <span className="mt-0.5 inline-block rounded border border-[var(--cg-border)] bg-[var(--cg-surface)] px-2 py-0.5 font-mono font-semibold text-[var(--cg-primary)]">
                   {device.assetId}
                 </span>
               </div>
             </div>
 
-            {/* Current Status Badge */}
-            <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+            <div className="flex items-center justify-between border-t border-[var(--cg-border)] pt-2">
               <div>
-                <span className="text-slate-500 text-[10px] uppercase font-bold block">{t('currentStatus')}</span>
-                <span
-                  className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold mt-0.5 ${
-                    isInside
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : isLost
-                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                      : 'bg-indigo-100 text-indigo-800 border border-indigo-300'
-                  }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full mr-1.5 ${
-                      isInside ? 'bg-emerald-500' : isLost ? 'bg-rose-500' : 'bg-indigo-500'
-                    }`}
-                  />
-                  {device.status.replace('_', ' ')}
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{t('currentStatus')}</span>
+                <span className={`mt-0.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  isInside ? 'bg-emerald-50 text-[var(--cg-success)] border border-emerald-200'
+                  : isLost ? 'bg-red-50 text-[var(--cg-danger)] border border-red-200'
+                  : 'bg-sky-50 text-[var(--cg-info)] border border-sky-200'
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${isInside ? 'bg-[var(--cg-success)]' : isLost ? 'bg-[var(--cg-danger)]' : 'bg-[var(--cg-info)]'}`} />
+                  {device.status.replace(/_/g, ' ')}
                 </span>
               </div>
-
-              {/* Station Context */}
               <div className="text-right">
-                <span className="text-slate-500 text-[10px] uppercase font-bold block">
-                  {language === 'am' ? 'የፍተሻ ኬላ / ኦፊሰር' : 'Inspection Station'}
-                </span>
-                <span className="text-xs font-semibold text-slate-800">
-                  {currentGate.name} ({activeOfficer.officerBadgeId})
-                </span>
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">Inspection Station</span>
+                <span className="text-xs font-semibold text-[var(--cg-text)]">{currentGate.name} ({activeOfficer.officerBadgeId})</span>
               </div>
             </div>
 
             {device.lastMovement && (
-              <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-[11px] text-slate-600 flex items-center justify-between">
+              <div className="flex items-center justify-between rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] p-2.5 text-[11px] text-[var(--cg-text-muted)]">
                 <span className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{t('lastMovement')}: {device.lastMovement.type} at {device.lastMovement.gateName}</span>
+                  <Clock className="h-3.5 w-3.5" />
+                  {t('lastMovement')}: {device.lastMovement.type} at {device.lastMovement.gateName}
                 </span>
                 <span className="font-mono">{device.lastMovement.timestamp}</span>
               </div>
             )}
           </div>
 
-          {/* Security Incident Drawer (when needed) */}
-          {showIncidentForm ? (
-            <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl space-y-3">
-              <div className="font-bold text-xs text-rose-950 flex items-center justify-between">
-                <span>{t('createIncident')}</span>
-                <button
-                  onClick={() => setShowIncidentForm(false)}
-                  className="text-xs text-rose-700 hover:underline"
-                >
-                  {t('cancel')}
-                </button>
+          {/* Incident form */}
+          {showIncidentForm && (
+            <div className="rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[var(--cg-text)]">{t('createIncident')}</span>
+                <button onClick={() => setShowIncidentForm(false)} className="text-xs text-[var(--cg-text-muted)] hover:text-[var(--cg-text)]">{t('cancel')}</button>
               </div>
-              <div className="space-y-2 text-xs">
-                <label className="block text-slate-700 font-medium">Incident Category:</label>
-                <select
-                  value={incidentReason}
-                  onChange={(e) => setIncidentReason(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs"
-                >
-                  <option value="LOST_DEVICE">Device Reported Lost Flagged</option>
-                  <option value="DEVICE_MISMATCH">Owner or Serial Mismatch</option>
-                  <option value="UNAUTHORIZED_EXIT">Unauthorized Exit Attempt</option>
-                  <option value="UNKNOWN_DEVICE">Tampered Serial Sticker</option>
-                </select>
-                <label className="block text-slate-700 font-medium">Officer Notes / Observations:</label>
-                <textarea
-                  value={incidentNotes}
-                  onChange={(e) => setIncidentNotes(e.target.value)}
-                  placeholder="Record student statement, ID discrepancies, or supervisor instructions..."
-                  rows={2}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs focus:ring-1 focus:ring-purple-600"
-                />
-                <button
-                  onClick={handleLogIncident}
-                  className="w-full py-2 bg-rose-800 text-white rounded-lg font-bold text-xs hover:bg-rose-700 transition-colors"
-                >
-                  Submit Incident to Central Security Registry
-                </button>
-              </div>
+              <select
+                value={incidentReason}
+                onChange={(e) => setIncidentReason(e.target.value)}
+                className="w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 py-2 text-xs text-[var(--cg-text)]"
+              >
+                <option value="LOST_DEVICE">Device Reported Lost</option>
+                <option value="DEVICE_MISMATCH">Owner / Serial Mismatch</option>
+                <option value="UNAUTHORIZED_EXIT">Unauthorized Exit Attempt</option>
+                <option value="UNKNOWN_DEVICE">Tampered Serial</option>
+              </select>
+              <textarea
+                value={incidentNotes}
+                onChange={(e) => setIncidentNotes(e.target.value)}
+                placeholder="Officer observations and notes..."
+                rows={2}
+                className="w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 py-2 text-xs text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]"
+              />
+              <button
+                onClick={handleLogIncident}
+                className="w-full rounded-lg bg-[var(--cg-danger)] py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+              >
+                Submit Incident to Security Registry
+              </button>
             </div>
-          ) : null}
+          )}
 
-          {/* Action Buttons based on Rules */}
-          <div className="pt-2 space-y-2.5">
+          {/* Action buttons */}
+          <div className="space-y-2.5">
             {isLost ? (
               <div className="space-y-2">
                 <button
                   onClick={() => setShowIncidentForm(true)}
-                  className="w-full py-3.5 px-4 rounded-xl bg-rose-800 hover:bg-rose-700 text-white font-bold text-sm flex items-center justify-center space-x-2 shadow-lg transition-colors"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--cg-danger)] py-3.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
                 >
-                  <AlertTriangle className="w-5 h-5 text-rose-200" />
-                  <span>{t('createIncident')}</span>
+                  <AlertTriangle className="h-4 w-4" />
+                  {t('createIncident')}
                 </button>
-                <p className="text-center text-[11px] text-slate-500">
+                <p className="text-center text-[11px] text-[var(--cg-text-muted)]">
                   {language === 'am'
-                    ? 'መሳሪያው የጠፋ በመሆኑ ማስተላለፍ አይፈቀድም። ኦፊሰሩ የደህንነት ሃላፊውን ማሳወቅ አለበት።'
-                    : 'Rule 10: Device is marked LOST. Clearance from Security Administration is mandatory before release.'}
+                    ? 'መሳሪያው የጠፋ ነው። ያለ ፈቃድ ማስተላለፍ አይፈቀድም።'
+                    : 'Device is LOST. Clearance from Security Administration required before release.'}
                 </p>
               </div>
             ) : isInside ? (
-              /* Device is INSIDE -> Ready for CHECK OUT */
               <div className="space-y-2">
-                <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 text-xs text-emerald-900 font-medium flex items-center justify-between">
-                  <span>{t('readyForCheckOut')}</span>
-                  <span className="font-bold">{currentGate.name}</span>
+                <div className="flex items-center justify-between rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-xs">
+                  <span className="font-medium text-[var(--cg-text)]">{t('readyForCheckOut')}</span>
+                  <span className="font-semibold text-[var(--cg-text)]">{currentGate.name}</span>
                 </div>
                 <button
                   onClick={handleCheckOut}
                   disabled={isProcessing}
-                  className="w-full py-3.5 px-4 rounded-xl bg-purple-900 hover:bg-purple-800 text-white font-extrabold text-sm flex items-center justify-center space-x-2 shadow-lg transition-all active:scale-[0.99] disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] py-3.5 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors disabled:opacity-60"
                 >
-                  {isProcessing ? (
-                    <span>Recording Check-Out...</span>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                      <span>{t('verifyAndCheckOut')}</span>
-                    </>
-                  )}
+                  <CheckCircle2 className="h-4 w-4" />
+                  {isProcessing ? 'Recording…' : t('verifyAndCheckOut')}
                 </button>
               </div>
             ) : isOutside ? (
-              /* Device is OUTSIDE -> Ready for CHECK IN */
               <div className="space-y-2">
-                <div className="p-2.5 bg-indigo-50 rounded-lg border border-indigo-200 text-xs text-indigo-900 font-medium flex items-center justify-between">
-                  <span>{t('readyForCheckIn')}</span>
-                  <span className="font-bold">{currentGate.name}</span>
+                <div className="flex items-center justify-between rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-xs">
+                  <span className="font-medium text-[var(--cg-text)]">{t('readyForCheckIn')}</span>
+                  <span className="font-semibold text-[var(--cg-text)]">{currentGate.name}</span>
                 </div>
                 <button
                   onClick={handleCheckIn}
                   disabled={isProcessing}
-                  className="w-full py-3.5 px-4 rounded-xl bg-purple-900 hover:bg-purple-800 text-white font-extrabold text-sm flex items-center justify-center space-x-2 shadow-lg transition-all active:scale-[0.99] disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] py-3.5 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors disabled:opacity-60"
                 >
-                  {isProcessing ? (
-                    <span>Verifying and Checking In...</span>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                      <span>{t('verifyAndCheckIn')}</span>
-                    </>
-                  )}
+                  <CheckCircle2 className="h-4 w-4" />
+                  {isProcessing ? 'Verifying…' : t('verifyAndCheckIn')}
                 </button>
               </div>
             ) : null}
 
-            {/* Incident Trigger option for Officer */}
             {!isLost && !showIncidentForm && (
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-1">
                 <button
                   onClick={() => setShowIncidentForm(true)}
-                  className="text-xs text-rose-700 hover:text-rose-900 font-semibold hover:underline flex items-center gap-1"
+                  className="flex items-center gap-1 text-xs font-medium text-[var(--cg-danger)] hover:underline"
                 >
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>{t('createIncident')}</span>
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {t('createIncident')}
                 </button>
                 <button
                   onClick={onClose}
-                  className="text-xs text-slate-500 hover:text-slate-800 font-medium px-3 py-1 rounded hover:bg-slate-100"
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors"
                 >
                   {t('close')}
                 </button>

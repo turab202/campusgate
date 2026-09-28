@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Camera,
-  PlusCircle,
-  Clock,
-  Users,
-  ShieldAlert,
-  Search,
-  Laptop
-} from 'lucide-react';
+import { Camera, PlusCircle, Clock, Users, ShieldAlert } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DeviceScanner } from './DeviceScanner';
 import { DeviceEnrollment } from './DeviceEnrollment';
@@ -16,98 +8,60 @@ import { VisitorManager } from './VisitorManager';
 import { IncidentManager } from './IncidentManager';
 
 export const OfficerMain: React.FC = () => {
-  const { t, language, activeTab, setActiveTab } = useApp();
-  const [prefilledSerialForEnroll, setPrefilledSerialForEnroll] = useState<string>('');
+  const { t, activeTab, setActiveTab } = useApp();
+  const [prefilledSerial, setPrefilledSerial] = useState<string>('');
 
   const handleStartEnrollment = (serial?: string) => {
-    if (serial) setPrefilledSerialForEnroll(serial);
+    if (serial) setPrefilledSerial(serial);
     setActiveTab('gate_enroll');
   };
 
+  const tabs = [
+    { id: 'gate_scan', label: t('navScanDevice'), icon: Camera },
+    { id: 'gate_enroll', label: t('navEnrollDevice'), icon: PlusCircle },
+    { id: 'gate_transactions', label: t('navTransactions'), icon: Clock },
+    { id: 'gate_visitors', label: t('navVisitors'), icon: Users },
+    { id: 'gate_incidents', label: t('navIncidents'), icon: ShieldAlert },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Officer Primary Navigation Tabs (Big touch targets for tablet / mobile) */}
-      <div className="bg-white p-2 rounded-2xl border border-purple-100 shadow-sm flex items-center space-x-1.5 overflow-x-auto text-xs font-bold">
-        <button
-          onClick={() => setActiveTab('gate_scan')}
-          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all shrink-0 ${
-            activeTab === 'gate_scan'
-              ? 'bg-purple-900 text-white shadow-md'
-              : 'text-slate-600 hover:text-purple-950 hover:bg-purple-50'
-          }`}
-        >
-          <Camera className="w-4 h-4" />
-          <span>{t('navScanDevice')}</span>
-        </button>
+      {/* Tab navigation */}
+      <nav
+        className="flex items-center gap-1 overflow-x-auto rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-1.5"
+        aria-label="Officer navigation"
+      >
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => {
+              if (id === 'gate_enroll') setPrefilledSerial('');
+              setActiveTab(id);
+            }}
+            className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold transition-colors ${
+              activeTab === id
+                ? 'bg-[var(--cg-primary)] text-white shadow-sm'
+                : 'text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] hover:text-[var(--cg-text)]'
+            }`}
+            aria-current={activeTab === id ? 'page' : undefined}
+          >
+            <Icon className="h-4 w-4" />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
 
-        <button
-          onClick={() => {
-            setPrefilledSerialForEnroll('');
-            setActiveTab('gate_enroll');
-          }}
-          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all shrink-0 ${
-            activeTab === 'gate_enroll'
-              ? 'bg-purple-900 text-white shadow-md'
-              : 'text-slate-600 hover:text-purple-950 hover:bg-purple-50'
-          }`}
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>{t('navEnrollDevice')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('gate_transactions')}
-          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all shrink-0 ${
-            activeTab === 'gate_transactions'
-              ? 'bg-purple-900 text-white shadow-md'
-              : 'text-slate-600 hover:text-purple-950 hover:bg-purple-50'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          <span>{t('navTransactions')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('gate_visitors')}
-          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all shrink-0 ${
-            activeTab === 'gate_visitors'
-              ? 'bg-purple-900 text-white shadow-md'
-              : 'text-slate-600 hover:text-purple-950 hover:bg-purple-50'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>{t('navVisitors')}</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('gate_incidents')}
-          className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all shrink-0 ${
-            activeTab === 'gate_incidents'
-              ? 'bg-purple-900 text-white shadow-md'
-              : 'text-slate-600 hover:text-purple-950 hover:bg-purple-50'
-          }`}
-        >
-          <ShieldAlert className="w-4 h-4" />
-          <span>{t('navIncidents')}</span>
-        </button>
-      </div>
-
-      {/* Main View Display */}
       {activeTab === 'gate_scan' && (
         <DeviceScanner onNavigateToEnroll={handleStartEnrollment} />
       )}
-
       {activeTab === 'gate_enroll' && (
         <DeviceEnrollment
-          initialSerial={prefilledSerialForEnroll}
+          initialSerial={prefilledSerial}
           onFinished={() => setActiveTab('gate_scan')}
         />
       )}
-
       {activeTab === 'gate_transactions' && <GateTransactions />}
-
       {activeTab === 'gate_visitors' && <VisitorManager />}
-
       {activeTab === 'gate_incidents' && <IncidentManager />}
     </div>
   );
