@@ -36,9 +36,21 @@ const STORAGE_KEYS = {
   AUDIT: 'campusgate_audit_v3'
 };
 
-function loadFromStorage<T>(key: string, fallback: T): T {
+function getStorage(): Storage | null {
+  if (typeof window === 'undefined') return null;
   try {
-    const item = localStorage.getItem(key);
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  const storage = getStorage();
+  if (!storage) return fallback;
+
+  try {
+    const item = storage.getItem(key);
     if (!item) return fallback;
     return JSON.parse(item) as T;
   } catch {
@@ -47,8 +59,11 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 }
 
 function saveToStorage<T>(key: string, data: T): void {
+  const storage = getStorage();
+  if (!storage) return;
+
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    storage.setItem(key, JSON.stringify(data));
   } catch (e) {
     console.warn('Storage save failed:', e);
   }
@@ -91,7 +106,8 @@ class CampusGateStore {
     this.requests = [...initialExitRequests];
     this.auditLogs = [...initialAuditLogs];
 
-    Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+    const storage = getStorage();
+    Object.values(STORAGE_KEYS).forEach((k) => storage?.removeItem(k));
     this.notify();
   }
 

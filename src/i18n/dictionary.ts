@@ -1,0 +1,57 @@
+export const dictionary = {
+  en: {
+    appName: 'CampusGate',
+    appSubtitle: 'University Access & Security Management',
+    signIn: 'Sign In',
+    signInTitle: 'Welcome back',
+    signInSubtitle: 'Access your designated university portal',
+    universityIdOrEmail: 'University ID / Email',
+    password: 'Password',
+    rememberMe: 'Remember session',
+    forgotPassword: 'Forgot password?',
+    authorizedNotice: 'Authorized users only. Students, staff, officers, and administrators are verified before access is granted.',
+    noAccount: "Don't have an account?",
+    registerStudent: 'Register as Student / Staff',
+    registerTitle: 'Create Student / Staff account',
+    registerSubtitle: 'Complete your university profile for future access and device management.',
+    fullName: 'Full name',
+    department: 'Department',
+    phone: 'Phone number',
+    createAccount: 'Create Account',
+    haveAccount: 'Already have an account?',
+    loginInstead: 'Sign in instead',
+    language: 'Language',
+    english: 'English',
+    amharic: 'አማርኛ',
+    formHelp: 'University verification may be required before account activation.'
+  },
+  am: {
+    appName: 'ካምፓስ ጌት',
+    appSubtitle: 'የዩኒቨርሲቲ ተያያዥ እና የደህንነት አስተዳደር',
+    signIn: 'ግባ',
+    signInTitle: 'እንኳን ደህና መጡ',
+    signInSubtitle: 'የእርስዎን የዩኒቨርሲቲ ፖርታል ይድረሱ',
+    universityIdOrEmail: 'የዩኒቨርሲቲ መለያ / ኢሜይል',
+    password: 'የይለፍ ቃል',
+    rememberMe: 'ክፍለ አሰራር ተያይዞ',
+    forgotPassword: 'የይለፍ ቃል ረሱ?',
+    authorizedNotice: 'የተፈቀዱ ተጠቃሚዎች ብቻ ይድረሱ። ተማሪዎች፣ ሰራተኞች፣ ኦፊሰሮች እና አስተዳዳሪዎች ከመድረሳቸው በፊት ይረጋገጣሉ።',
+    noAccount: 'መለያ የለዎትም?',
+    registerStudent: 'እንደ ተማሪ / ሰራተኛ ይመዝግቡ',
+    registerTitle: 'የተማሪ / ሰራተኛ መለያ ይፍጠሩ',
+    registerSubtitle: 'ለወደፊት መድረሻ እና ለመሳሪያ አስተዳደር የዩኒቨርሲቲ መለያዎን ያጠናቅቁ።',
+    fullName: 'ሙሉ ስም',
+    department: 'ክፍል',
+    phone: 'ስልክ ቁጥር',
+    createAccount: 'መለያ ፍጠር',
+    haveAccount: 'መለያ አለዎት?',
+    loginInstead: 'ከዚህ በኋላ ግባ',
+    language: 'ቋንቋ',
+    english: 'English',
+    amharic: 'አማርኛ',
+    formHelp: 'መለያን ከማግበር በፊት የዩኒቨርሲቲ ማረጋገጫ ሊያስፈልግ ይችላል።'
+  }
+} as const;
+
+export type Locale = keyof typeof dictionary;
+export type DictionaryKey = keyof (typeof dictionary)['en'];

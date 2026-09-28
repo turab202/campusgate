@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { translations, Language } from '../i18n/translations';
 import { Gate, GateOfficer, Student, UserRole } from '../types';
@@ -35,13 +37,22 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const getStoredValue = (key: string) => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return window.localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+
   // Load initial preferences
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('cg_auth_logged_in') === 'true';
+    return getStoredValue('cg_auth_logged_in') === 'true';
   });
 
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: UserRole; identifier: string } | null>(() => {
-    const saved = localStorage.getItem('cg_current_user');
+    const saved = getStoredValue('cg_current_user');
     if (saved) {
       try { return JSON.parse(saved); } catch { return null; }
     }
@@ -49,18 +60,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [role, setRoleState] = useState<UserRole>(() => {
-    return (localStorage.getItem('cg_role') as UserRole) || 'OFFICER';
+    return (getStoredValue('cg_role') as UserRole) || 'OFFICER';
   });
 
   const [language, setLanguageState] = useState<Language>(() => {
     // Gate officer defaults to Amharic as required by Section 27
-    const stored = localStorage.getItem('cg_lang') as Language;
+    const stored = getStoredValue('cg_lang') as Language;
     if (stored) return stored;
     return role === 'OFFICER' ? 'am' : 'en';
   });
 
   const [currentGateId, setCurrentGateIdState] = useState<string>(() => {
-    return localStorage.getItem('cg_gateId') || 'gate-1';
+    return getStoredValue('cg_gateId') || 'gate-1';
   });
 
   const [activeOfficerId, setActiveOfficerIdState] = useState<string>('off-1');
@@ -87,11 +98,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setRole = (newRole: UserRole) => {
     setRoleState(newRole);
-    localStorage.setItem('cg_role', newRole);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('cg_role', newRole);
+    }
     if (newRole === 'OFFICER') {
       setActiveTab('gate_scan');
-      // If switching to officer, prompt asked for Amharic default
-      if (!localStorage.getItem('cg_lang_manually_set')) {
+      if (typeof window !== 'undefined' && !window.localStorage.getItem('cg_lang_manually_set')) {
         setLanguageState('am');
       }
     } else if (newRole === 'STUDENT') {
@@ -103,13 +115,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('cg_lang', lang);
-    localStorage.setItem('cg_lang_manually_set', 'true');
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('cg_lang', lang);
+      window.localStorage.setItem('cg_lang_manually_set', 'true');
+    }
   };
 
   const setCurrentGateId = (gateId: string) => {
     setCurrentGateIdState(gateId);
-    localStorage.setItem('cg_gateId', gateId);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('cg_gateId', gateId);
+    }
   };
 
   const showToast = (message: string, type: 'success' | 'warning' | 'error' | 'info' = 'info') => {
@@ -190,8 +206,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentGateIdState(off.assignedGateId || 'gate-1');
       setIsAuthenticated(true);
       setRole('OFFICER');
-      localStorage.setItem('cg_auth_logged_in', 'true');
-      localStorage.setItem('cg_current_user', JSON.stringify(user));
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('cg_auth_logged_in', 'true');
+        window.localStorage.setItem('cg_current_user', JSON.stringify(user));
+      }
       showToast(`Welcome back, Officer ${off.name} (${off.officerBadgeId})`, 'success');
       return true;
     }
@@ -209,8 +227,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentStudentIdState(stud.id);
       setIsAuthenticated(true);
       setRole('STUDENT');
-      localStorage.setItem('cg_auth_logged_in', 'true');
-      localStorage.setItem('cg_current_user', JSON.stringify(user));
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('cg_auth_logged_in', 'true');
+        window.localStorage.setItem('cg_current_user', JSON.stringify(user));
+      }
       showToast(`Welcome, ${stud.name} (${stud.studentId})`, 'success');
       return true;
     }
@@ -226,8 +246,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser(user);
       setIsAuthenticated(true);
       setRole('ADMIN');
-      localStorage.setItem('cg_auth_logged_in', 'true');
-      localStorage.setItem('cg_current_user', JSON.stringify(user));
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('cg_auth_logged_in', 'true');
+        window.localStorage.setItem('cg_current_user', JSON.stringify(user));
+      }
       showToast('Logged in as Security Administrator', 'success');
       return true;
     }
@@ -244,8 +266,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(fallbackUser);
     setIsAuthenticated(true);
     setRole(fallbackRole);
-    localStorage.setItem('cg_auth_logged_in', 'true');
-    localStorage.setItem('cg_current_user', JSON.stringify(fallbackUser));
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('cg_auth_logged_in', 'true');
+      window.localStorage.setItem('cg_current_user', JSON.stringify(fallbackUser));
+    }
     showToast(`Signed in as ${identifier}`, 'success');
     return true;
   };
@@ -291,8 +315,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(user);
     setIsAuthenticated(true);
     setRole('STUDENT');
-    localStorage.setItem('cg_auth_logged_in', 'true');
-    localStorage.setItem('cg_current_user', JSON.stringify(user));
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('cg_auth_logged_in', 'true');
+      window.localStorage.setItem('cg_current_user', JSON.stringify(user));
+    }
 
     showToast(`Account created for ${newStudent.name}! You are now logged in.`, 'success');
     return { success: true, message: 'Account created successfully.' };
@@ -301,8 +327,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
-    localStorage.removeItem('cg_auth_logged_in');
-    localStorage.removeItem('cg_current_user');
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('cg_auth_logged_in');
+      window.localStorage.removeItem('cg_current_user');
+    }
     showToast('Signed out of CampusGate', 'info');
   };
 

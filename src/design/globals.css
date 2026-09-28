@@ -1,0 +1,36 @@
+:root {
+  --cg-background: #F8FAFC;
+  --cg-surface: #FFFFFF;
+  --cg-surface-muted: #F1F5F9;
+  --cg-primary: #1E3A5F;
+  --cg-primary-hover: #17324F;
+  --cg-text: #0F172A;
+  --cg-text-muted: #64748B;
+  --cg-border: #E2E8F0;
+  --cg-success: #15803D;
+  --cg-warning: #B45309;
+  --cg-danger: #B91C1C;
+  --cg-info: #0369A1;
+  --cg-shadow-card: 0 12px 30px rgba(15, 23, 42, 0.08);
+  --cg-shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--cg-background);
+  color: var(--cg-text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

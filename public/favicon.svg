@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">CampusGate</title>
+  <desc id="desc">A modern campus security access icon with a shield, security gate, and checkmark.</desc>
+  <defs>
+    <linearGradient id="bg" x1="64" y1="64" x2="448" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="0.5" stop-color="#111827"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="152" y1="128" x2="360" y2="396" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="0.35" stop-color="#c7d2fe"/>
+      <stop offset="1" stop-color="#fbbf24"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 210) rotate(90) scale(210)">
+      <stop offset="0" stop-color="#60a5fa" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#60a5fa" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <circle cx="256" cy="214" r="180" fill="url(#halo)"/>
+
+  <g opacity="0.22" stroke="#bfdbfe" stroke-width="2">
+    <path d="M92 164h328M92 220h328M92 276h328M92 332h328"/>
+    <path d="M164 108v296M248 108v296M332 108v296"/>
+  </g>
+
+  <path d="M256 70 369 110v126c0 78-47 146-113 170-66-24-113-92-113-170V110l113-40Z" fill="rgba(15,23,42,0.28)" stroke="url(#accent)" stroke-width="10" stroke-linejoin="round"/>
+
+  <path d="M170 224c17-30 44-45 86-45s69 15 86 45v78c0 39-30 71-86 95-56-24-86-56-86-95v-78Z" fill="rgba(15,23,42,0.25)" stroke="rgba(248,250,252,0.45)" stroke-width="4"/>
+
+  <g fill="none" stroke="url(#accent)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M188 245h128"/>
+    <path d="M188 288h128"/>
+    <path d="M220 210v150"/>
+    <path d="M292 210v150"/>
+  </g>
+
+  <path d="M198 332l33 33 83-95" fill="none" stroke="#fef3c7" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="256" cy="255" r="132" fill="none" stroke="rgba(251,191,36,0.35)" stroke-width="4" stroke-dasharray="10 12"/>
+</svg>
