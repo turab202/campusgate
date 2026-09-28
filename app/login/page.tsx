@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight, GraduationCap, UserCheck, ShieldCheck } from 'lucide-react';
 import { AuthLayout } from '@/src/components/auth/AuthLayout';
 import { Button } from '@/src/components/ui/Button';
-import { Checkbox } from '@/src/components/ui/Checkbox';
 import { Input } from '@/src/components/ui/Input';
 import { PasswordInput } from '@/src/components/ui/PasswordInput';
 import { Alert } from '@/src/components/ui/Alert';
@@ -14,87 +13,87 @@ import { FormField } from '@/src/components/ui/FormField';
 import { dictionary, Locale } from '@/src/i18n/dictionary';
 import { useApp } from '@/src/context/AppContext';
 
+const QUICK_LOGINS = [
+  { role: 'Student', icon: GraduationCap, id: 'ASTU-2024-01234', pw: 'demo', color: 'text-[var(--cg-info)]', bg: 'bg-[var(--cg-info-bg)] border-[var(--cg-info-border)]' },
+  { role: 'Officer', icon: UserCheck, id: 'GO-023', pw: 'demo', color: 'text-[var(--cg-success)]', bg: 'bg-[var(--cg-success-bg)] border-[var(--cg-success-border)]' },
+  { role: 'Admin', icon: ShieldCheck, id: 'ADMIN', pw: 'demo', color: 'text-[var(--cg-primary)]', bg: 'bg-[var(--cg-primary-light)] border-[var(--cg-border)]' },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const { login, language, isAuthenticated } = useApp();
   const [locale, setLocale] = useState<Locale>(language === 'am' ? 'am' : 'en');
 
-  useEffect(() => {
-    setLocale(language === 'am' ? 'am' : 'en');
-  }, [language]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace('/');
-    }
-  }, [isAuthenticated, router]);
+  useEffect(() => { setLocale(language === 'am' ? 'am' : 'en'); }, [language]);
+  useEffect(() => { if (isAuthenticated) router.replace('/'); }, [isAuthenticated, router]);
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const t = dictionary[locale];
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setError(null);
-
     if (!identifier.trim() || !password.trim()) {
       setError(locale === 'am' ? 'እባክዎ የዩኒቨርሲቲ መለያ እና የይለፍ ቃል ያስገቡ።' : 'Please enter your university ID and password.');
       return;
     }
-
-    const success = login(identifier.trim(), password.trim());
-    if (!success) {
+    const ok = login(identifier.trim(), password.trim());
+    if (!ok) {
       setError(locale === 'am' ? 'ልክ ያልሆነ መለያ ወይም የይለፍ ቃል' : 'Invalid university ID or password.');
       return;
     }
-
     router.push('/');
+  };
+
+  const handleQuickLogin = (id: string, pw: string) => {
+    setIdentifier(id);
+    setPassword(pw);
+    setError(null);
+    const ok = login(id, pw);
+    if (ok) router.push('/');
   };
 
   if (isAuthenticated) return null;
 
   return (
-    <AuthLayout
-      locale={locale}
-      title={t.signInTitle}
-      subtitle={t.signInSubtitle}
+    <AuthLayout locale={locale} title={t.signInTitle} subtitle={t.signInSubtitle}
       footer={
-        <div className="flex flex-col gap-2 border-t border-[var(--cg-border)] pt-5 text-sm text-[var(--cg-text-muted)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-t border-[var(--cg-border)] pt-4 text-sm text-[var(--cg-text-muted)] sm:flex-row sm:items-center sm:justify-between">
           <span>{t.noAccount}</span>
-          <Link href="/register" className="font-semibold text-[var(--cg-primary)] transition-colors hover:text-[var(--cg-primary-hover)]">
+          <Link href="/register" className="font-semibold text-[var(--cg-primary)] hover:text-[var(--cg-primary-hover)] transition-colors">
             {t.registerStudent}
           </Link>
         </div>
       }
-      rightPanel={
-        <div className="max-w-md space-y-6">
-          <div className="inline-flex items-center rounded-full border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--cg-text-muted)]">
-            Secure campus access
-          </div>
-          <h2 className="text-3xl font-semibold tracking-[-0.04em] text-[var(--cg-text)]">
-            One secure experience for students, officers, and administrators.
-          </h2>
-          <p className="text-base leading-7 text-[var(--cg-text-muted)]">
-            CampusGate consolidates university identity, gate access, and operational oversight into a single, trusted platform.
-          </p>
-          <div className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--cg-primary)] text-white">
-                <ShieldCheck className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--cg-text-muted)]">Authorized access</div>
-                <div className="text-lg font-semibold text-[var(--cg-text)]">Verified university identities only</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
     >
-      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+      {/* Quick access pills */}
+      <div className="mb-5">
+        <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">Quick access</p>
+        <div className="grid grid-cols-3 gap-2">
+          {QUICK_LOGINS.map(({ role, icon: Icon, id, pw, color, bg }) => (
+            <button
+              key={role}
+              type="button"
+              onClick={() => handleQuickLogin(id, pw)}
+              className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-center transition-all hover:shadow-[var(--cg-shadow-sm)] active:scale-[0.98] ${bg}`}
+            >
+              <Icon className={`h-4 w-4 ${color}`} />
+              <span className={`text-[11px] font-semibold ${color}`}>{role}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative mb-5 flex items-center gap-3">
+        <div className="h-px flex-1 bg-[var(--cg-border)]" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-subtle)]">or sign in manually</span>
+        <div className="h-px flex-1 bg-[var(--cg-border)]" />
+      </div>
+
+      <form className="space-y-4" onSubmit={handleSubmit} noValidate>
         {error ? <Alert variant="danger">{error}</Alert> : null}
 
         <FormField label={t.universityIdOrEmail}>
@@ -104,7 +103,7 @@ export default function LoginPage() {
             autoComplete="username"
             placeholder={locale === 'am' ? 'የዩኒቨርሲቲ መለያ / ኢሜይል' : 'University ID or email'}
             value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
+            onChange={(e) => setIdentifier(e.target.value)}
           />
         </FormField>
 
@@ -114,20 +113,12 @@ export default function LoginPage() {
             autoComplete="current-password"
             placeholder="••••••••"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
           />
         </FormField>
 
-        <div className="flex items-center justify-between gap-4">
-          <Checkbox
-            label={t.rememberMe}
-            checked={rememberMe}
-            onChange={(event) => setRememberMe(event.target.checked)}
-          />
-          <button
-            type="button"
-            className="text-sm font-medium text-[var(--cg-primary)] transition-colors hover:text-[var(--cg-primary-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cg-primary)]/20 focus-visible:ring-offset-2 rounded"
-          >
+        <div className="flex items-center justify-end">
+          <button type="button" className="text-xs font-semibold text-[var(--cg-primary)] hover:text-[var(--cg-primary-hover)] transition-colors">
             {t.forgotPassword}
           </button>
         </div>
@@ -135,10 +126,6 @@ export default function LoginPage() {
         <Button type="submit" fullWidth size="lg" icon={<ArrowRight className="h-4 w-4" />}>
           {t.signIn}
         </Button>
-
-        <div className="rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-3 text-xs leading-6 text-[var(--cg-text-muted)]">
-          {t.authorizedNotice}
-        </div>
       </form>
     </AuthLayout>
   );
