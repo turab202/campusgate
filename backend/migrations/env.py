@@ -12,9 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from app.core.config import settings
 from app.db.base import Base
 
-# Import all models here so Alembic autogenerate can detect them.
-# Example (add as models are created):
-# from app.models import user, device  # noqa: F401
+# Import all models so Alembic autogenerate detects every table.
+import app.models  # noqa: F401
 
 config = context.config
 
