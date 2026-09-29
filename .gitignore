@@ -1,3 +1,4 @@
+# Node / Next.js
 node_modules/
 .next/
 build/
@@ -5,5 +6,41 @@ dist/
 coverage/
 .DS_Store
 *.log
-.env*
+
+# Environment secrets — never commit real .env files
+.env
+.env.local
+.env.*.local
 !.env.example
+backend/.env
+!backend/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+backend/.venv/
+.venv/
+venv/
+*.egg-info/
+.eggs/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Mypy
+.mypy_cache/
+
+# IDE
+.idea/
+.vscode/
+
+# Docker local data
+postgres_data/
+
+# OS
+Thumbs.db
