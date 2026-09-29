@@ -92,7 +92,7 @@ def enroll_device(db: Session, request: DeviceEnrollRequest, actor: User) -> Dev
     else:
         if request.owner_id is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="owner_id is required for ADMIN/GATE_OFFICER enrollment",
             )
         owner = db.get(User, request.owner_id)
@@ -100,7 +100,7 @@ def enroll_device(db: Session, request: DeviceEnrollRequest, actor: User) -> Dev
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Owner not found")
         if not owner.is_active:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Owner account is inactive",
             )
 
@@ -155,12 +155,12 @@ def check_out_device(db: Session, device_id: uuid.UUID, officer: User, notes: st
 
     if device.status in _LOST_STATUSES:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Device is {device.status.value} — cannot process movement",
         )
     if device.status != DeviceStatus.INSIDE_CAMPUS:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Device is already outside campus",
         )
 
@@ -209,12 +209,12 @@ def check_in_device(db: Session, device_id: uuid.UUID, officer: User, notes: str
 
     if device.status in _LOST_STATUSES:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Device is {device.status.value} — cannot process movement",
         )
     if device.status != DeviceStatus.OUTSIDE_CAMPUS:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Device is already inside campus",
         )
 
