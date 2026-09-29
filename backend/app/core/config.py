@@ -15,11 +15,15 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
 
-    @field_validator("DATABASE_URL")
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    @field_validator("DATABASE_URL", "JWT_SECRET_KEY")
     @classmethod
-    def database_url_must_be_set(cls, v: str) -> str:
+    def must_be_set(cls, v: str) -> str:
         if not v:
-            raise ValueError("DATABASE_URL must be set")
+            raise ValueError("must be set")
         return v
 
 
