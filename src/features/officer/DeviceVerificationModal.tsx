@@ -6,6 +6,8 @@ import {
 import { Device, Student } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { campusStore } from '../../services/storage';
+import { checkInDeviceApi, checkOutDeviceApi } from '../../services/deviceService';
+import { ApiError } from '../../services/api';
 
 interface DeviceVerificationModalProps {
   device: Device | null;
@@ -80,44 +82,41 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
     device.lastMovement?.gateId &&
     device.lastMovement.gateId !== currentGate.id;
 
-  const handleCheckOut = () => {
+  const handleCheckOut = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
-      const res = campusStore.checkOutDevice({
-        deviceId: device.id,
-        gateId: currentGate.id,
-        officerBadge: activeOfficer.officerBadgeId,
-        officerName: activeOfficer.name,
-        verifiedMethod: 'QR_SCAN'
-      });
+    try {
+      const res = await checkOutDeviceApi(device.id);
+      showToast(
+        `Device ${res.device.asset_id} checked out via ${res.gate.name}.`,
+        'success',
+      );
+      onClose();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Check-out failed.';
+      showToast(message, 'error');
+    } finally {
       setIsProcessing(false);
-      if (res.success) {
-        showToast(`Device ${device.assetId} checked out via ${currentGate.name}.`, 'success');
-        onClose();
-      } else {
-        showToast(res.message, 'error');
-      }
-    }, 400);
+    }
   };
 
-  const handleCheckIn = () => {
+  const handleCheckIn = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
-      const res = campusStore.checkInDevice({
-        deviceId: device.id,
-        gateId: currentGate.id,
-        officerBadge: activeOfficer.officerBadgeId,
-        officerName: activeOfficer.name,
-        verifiedMethod: 'QR_SCAN'
-      });
+    try {
+      const res = await checkInDeviceApi(device.id);
+      const isCross = res.gate.id !== currentGate.id;
+      showToast(
+        isCross
+          ? `Cross-gate return verified via ${res.gate.name}. Device is now INSIDE CAMPUS.`
+          : `Device ${res.device.asset_id} checked in via ${res.gate.name}.`,
+        'success',
+      );
+      onClose();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Check-in failed.';
+      showToast(message, 'error');
+    } finally {
       setIsProcessing(false);
-      if (res.success) {
-        showToast(res.message, 'success');
-        onClose();
-      } else {
-        showToast(res.message, 'error');
-      }
-    }, 400);
+    }
   };
 
   const handleLogIncident = () => {

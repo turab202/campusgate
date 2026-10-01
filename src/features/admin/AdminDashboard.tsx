@@ -8,6 +8,8 @@ import { useApp } from '../../context/AppContext';
 import { campusStore } from '../../services/storage';
 import { Device } from '../../types';
 import { QRPassModal } from '../../components/QRPassModal';
+import { recoverDeviceApi } from '../../services/deviceService';
+import { ApiError } from '../../services/api';
 
 export const AdminDashboard: React.FC = () => {
   const { t, language, showToast } = useApp();
@@ -58,9 +60,16 @@ export const AdminDashboard: React.FC = () => {
     showToast('Shift assignment updated.', 'success');
   };
 
-  const handleResolveLost = (devId: string) => {
-    const res = campusStore.resolveLostDevice(devId, 'Security Administrator');
-    showToast(res.message, 'success');
+  const handleResolveLost = async (devId: string) => {
+    try {
+      await recoverDeviceApi(devId, 'INSIDE_CAMPUS', 'Cleared by administrator after verification.');
+      // Also update local mock store so the UI reflects the change immediately
+      campusStore.resolveLostDevice(devId, 'Security Administrator');
+      showToast('Lost flag cleared. Device restored to INSIDE CAMPUS.', 'success');
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Recovery failed.';
+      showToast(message, 'error');
+    }
   };
 
   const handleApproveRequest = (reqId: string) => {

@@ -13,17 +13,23 @@ import { FormField } from '@/src/components/ui/FormField';
 import { dictionary, Locale } from '@/src/i18n/dictionary';
 import { useApp } from '@/src/context/AppContext';
 
+// ---------------------------------------------------------------------------
+// NOTE: POST /api/v1/users (student self-registration) is a missing backend
+// endpoint identified in the integration audit. This form is preserved for
+// UI continuity but submission is disabled until the endpoint is implemented.
+// ---------------------------------------------------------------------------
+
 export default function RegisterPage() {
   const router = useRouter();
-  const { registerStudent, language } = useApp();
+  const { language } = useApp();
   const [locale, setLocale] = useState<Locale>(language === 'am' ? 'am' : 'en');
 
   useEffect(() => { setLocale(language === 'am' ? 'am' : 'en'); }, [language]);
 
-  const [form, setForm] = useState({ name: '', studentId: '', department: '', email: '', phone: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({
+    name: '', studentId: '', department: '', email: '', phone: '', password: '', confirmPassword: '',
+  });
   const [errors, setErrors] = useState<Partial<typeof form>>({});
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const t = dictionary[locale];
 
@@ -41,21 +47,22 @@ export default function RegisterPage() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitError(null);
-    setSuccess(null);
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
-    const result = registerStudent({ name: form.name, studentId: form.studentId, department: form.department, email: form.email, phone: form.phone, password: form.password });
-    if (!result.success) { setSubmitError(result.message); return; }
-    setSuccess(result.message);
-    setTimeout(() => router.push('/'), 1200);
+    // Backend gap: POST /api/v1/users is not yet implemented.
+    // Account creation requires an administrator to create users directly.
+    // This will be connected once the endpoint is available.
   };
 
-  const field = (key: keyof typeof form, value: string) => setForm((p) => ({ ...p, [key]: value }));
+  const field = (key: keyof typeof form, value: string) =>
+    setForm((p) => ({ ...p, [key]: value }));
 
   return (
-    <AuthLayout locale={locale} title={t.registerTitle} subtitle={t.registerSubtitle}
+    <AuthLayout
+      locale={locale}
+      title={t.registerTitle}
+      subtitle={t.registerSubtitle}
       footer={
         <div className="flex items-center justify-between gap-3 border-t border-[var(--cg-border)] pt-4 text-sm text-[var(--cg-text-muted)]">
           <span>{t.haveAccount}</span>
@@ -65,46 +72,55 @@ export default function RegisterPage() {
         </div>
       }
     >
-      <form className="space-y-3" onSubmit={handleSubmit} noValidate>
-        {submitError ? <Alert variant="danger">{submitError}</Alert> : null}
-        {success ? <Alert variant="success">{success}</Alert> : null}
+      <Alert variant="warning">
+        {locale === 'am'
+          ? 'የተማሪ ምዝገባ በቅርቡ ይገኛል። አስተዳዳሪ ሂሳብ ለመፍጠር ያግኙ።'
+          : 'Student self-registration is not yet available. Please contact an administrator to create your account.'}
+      </Alert>
 
+      <form className="mt-4 space-y-3 opacity-60 pointer-events-none" onSubmit={handleSubmit} noValidate aria-disabled>
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label={t.fullName} error={errors.name}>
-            <Input id="full-name" type="text" autoComplete="name" placeholder={locale === 'am' ? 'ሙሉ ስምዎን ያስገቡ' : 'Your full name'} value={form.name} onChange={(e) => field('name', e.target.value)} aria-invalid={!!errors.name} />
+            <Input id="full-name" type="text" autoComplete="name"
+              placeholder={locale === 'am' ? 'ሙሉ ስምዎን ያስገቡ' : 'Your full name'}
+              value={form.name} onChange={(e) => field('name', e.target.value)} disabled />
           </FormField>
           <FormField label={locale === 'am' ? 'የዩኒቨርሲቲ መለያ' : 'University ID'} error={errors.studentId}>
-            <Input id="student-id" type="text" autoComplete="off" placeholder="ASTU-2024-01234" value={form.studentId} onChange={(e) => field('studentId', e.target.value)} aria-invalid={!!errors.studentId} />
+            <Input id="student-id" type="text" autoComplete="off" placeholder="ASTU-2024-01234"
+              value={form.studentId} onChange={(e) => field('studentId', e.target.value)} disabled />
           </FormField>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label={t.department} error={errors.department}>
-            <Input id="department" type="text" placeholder={locale === 'am' ? 'ለምሳሌ: ሶፍትዌር ምህንድስና' : 'e.g. Software Engineering'} value={form.department} onChange={(e) => field('department', e.target.value)} aria-invalid={!!errors.department} />
+            <Input id="department" type="text"
+              placeholder={locale === 'am' ? 'ለምሳሌ: ሶፍትዌር ምህንድስና' : 'e.g. Software Engineering'}
+              value={form.department} onChange={(e) => field('department', e.target.value)} disabled />
           </FormField>
           <FormField label={t.phone}>
-            <Input id="phone" type="tel" autoComplete="tel" placeholder="+251 91 000 0000" value={form.phone} onChange={(e) => field('phone', e.target.value)} />
+            <Input id="phone" type="tel" autoComplete="tel" placeholder="+251 91 000 0000"
+              value={form.phone} onChange={(e) => field('phone', e.target.value)} disabled />
           </FormField>
         </div>
 
         <FormField label={locale === 'am' ? 'የዩኒቨርሲቲ ኢሜይል' : 'University Email'} error={errors.email}>
-          <Input id="email" type="email" autoComplete="email" placeholder={locale === 'am' ? 'ስምዎ@astu.edu.et' : 'yourname@astu.edu.et'} value={form.email} onChange={(e) => field('email', e.target.value)} aria-invalid={!!errors.email} />
+          <Input id="email" type="email" autoComplete="email"
+            placeholder={locale === 'am' ? 'ስምዎ@astu.edu.et' : 'yourname@astu.edu.et'}
+            value={form.email} onChange={(e) => field('email', e.target.value)} disabled />
         </FormField>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label={t.password} error={errors.password}>
-            <PasswordInput id="password" autoComplete="new-password" placeholder="••••••••" value={form.password} onChange={(e) => field('password', e.target.value)} aria-invalid={!!errors.password} />
+            <PasswordInput id="password" autoComplete="new-password" placeholder="••••••••"
+              value={form.password} onChange={(e) => field('password', e.target.value)} disabled />
           </FormField>
           <FormField label={locale === 'am' ? 'የይለፍ ቃል አረጋግጥ' : 'Confirm Password'} error={errors.confirmPassword}>
-            <PasswordInput id="confirm-password" autoComplete="new-password" placeholder="••••••••" value={form.confirmPassword} onChange={(e) => field('confirmPassword', e.target.value)} aria-invalid={!!errors.confirmPassword} />
+            <PasswordInput id="confirm-password" autoComplete="new-password" placeholder="••••••••"
+              value={form.confirmPassword} onChange={(e) => field('confirmPassword', e.target.value)} disabled />
           </FormField>
         </div>
 
-        <div className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-xs leading-5 text-[var(--cg-text-muted)]">
-          {t.formHelp}
-        </div>
-
-        <Button type="submit" fullWidth size="lg" icon={<ArrowRight className="h-4 w-4" />}>
+        <Button type="submit" fullWidth size="lg" icon={<ArrowRight className="h-4 w-4" />} disabled>
           {t.createAccount}
         </Button>
       </form>

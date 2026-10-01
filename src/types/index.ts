@@ -2,7 +2,7 @@ export type { Language } from '../i18n/translations';
 
 export type UserRole = 'STUDENT' | 'OFFICER' | 'ADMIN';
 
-export type DeviceStatus = 'INSIDE_CAMPUS' | 'OUTSIDE_CAMPUS' | 'LOST' | 'MAINTENANCE';
+export type DeviceStatus = 'INSIDE_CAMPUS' | 'OUTSIDE_CAMPUS' | 'LOST' | 'REPORTED_LOST' | 'MAINTENANCE';
 
 export type DeviceType = 'Laptop' | 'Tablet' | 'Phone' | 'Camera' | 'Monitor' | 'Projector' | 'Lab Equipment' | 'Other';
 

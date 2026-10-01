@@ -41,3 +41,20 @@ class IncidentStatus(str, enum.Enum):
     INVESTIGATING = "INVESTIGATING"
     RESOLVED = "RESOLVED"
     CLOSED = "CLOSED"
+
+
+class IdentificationType(str, enum.Enum):
+    NATIONAL_ID = "NATIONAL_ID"
+    PASSPORT = "PASSPORT"
+    DRIVER_LICENSE = "DRIVER_LICENSE"
+    OTHER = "OTHER"
+
+
+class VisitStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    CHECKED_IN = "CHECKED_IN"
+    CHECKED_OUT = "CHECKED_OUT"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"

@@ -9,6 +9,8 @@ import { Device } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { campusStore } from '../../services/storage';
 import { QRPassModal } from '../../components/QRPassModal';
+import { reportLostApi } from '../../services/deviceService';
+import { ApiError } from '../../services/api';
 
 export const StudentView: React.FC = () => {
   const { t, language, currentStudent, showToast } = useApp();
@@ -35,11 +37,22 @@ export const StudentView: React.FC = () => {
   const outsideCount = devices.filter((d) => d.status === 'OUTSIDE_CAMPUS').length;
   const lostCount = devices.filter((d) => d.status === 'LOST').length;
 
-  const handleConfirmLost = () => {
+  const handleConfirmLost = async () => {
     if (!deviceToReportLost) return;
-    const res = campusStore.reportLostDevice(deviceToReportLost.id, currentStudent.name);
-    setDeviceToReportLost(null);
-    showToast(res.message, 'warning');
+    try {
+      await reportLostApi(
+        deviceToReportLost.id,
+        'Device reported as lost by owner via student portal.',
+      );
+      // Also update local mock store so the UI reflects the change immediately
+      campusStore.reportLostDevice(deviceToReportLost.id, currentStudent.name);
+      setDeviceToReportLost(null);
+      showToast('Device status updated to LOST across all gate terminals.', 'warning');
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to report device as lost.';
+      setDeviceToReportLost(null);
+      showToast(message, 'error');
+    }
   };
 
   const handleCreateExitRequest = (e: React.FormEvent) => {

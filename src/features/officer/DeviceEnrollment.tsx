@@ -7,6 +7,8 @@ import { Device, DeviceType, Student } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { campusStore } from '../../services/storage';
 import { QRPassModal } from '../../components/QRPassModal';
+import { enrollDeviceApi, toBackendDeviceType } from '../../services/deviceService';
+import { ApiError } from '../../services/api';
 
 interface DeviceEnrollmentProps {
   initialSerial?: string;
@@ -14,7 +16,7 @@ interface DeviceEnrollmentProps {
 }
 
 export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSerial = '', onFinished }) => {
-  const { t, language, currentGate, activeOfficer, showToast } = useApp();
+  const { t, language, currentGate, activeOfficer, showToast, authUser } = useApp();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,39 +44,68 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
     setStep(2);
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleProceedToReview = () => {
     if (!serialNumber.trim()) {
       setErrorMessage(language === 'am' ? 'እባክዎ የሲሪያል ቁጥር ያስገቡ' : 'Serial number is required');
-      return;
-    }
-    const existing = campusStore.getDeviceBySerial(serialNumber.trim());
-    if (existing) {
-      setErrorMessage(
-        language === 'am'
-          ? `ይህ ሲሪያል (${serialNumber}) አስቀድሞ ተመዝግቧል።`
-          : `RULE 1: Serial ${serialNumber} is already enrolled to ${existing.ownerName} (${existing.assetId}).`
-      );
       return;
     }
     setErrorMessage(null);
     setStep(4);
   };
 
-  const handleConfirmEnrollment = () => {
-    if (!selectedStudent) return;
-    const res = campusStore.enrollDevice({
-      student: selectedStudent,
-      deviceType, brand, model,
-      serialNumber: serialNumber.trim().toUpperCase(),
-      notes,
-      gateId: currentGate.id,
-      officerBadge: activeOfficer.officerBadgeId,
-      officerName: activeOfficer.name
-    });
-    if (res.error) { setErrorMessage(res.error); return; }
-    setEnrolledDevice(res.device);
-    setStep(5);
-    showToast(`Device ${res.device.assetId} enrolled at ${currentGate.name}!`, 'success');
+  const handleConfirmEnrollment = async () => {
+    if (!selectedStudent || !authUser) return;
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      // GATE_OFFICER enrolling on behalf of a student.
+      // Backend requires owner_id (UUID). The user-search endpoint does not
+      // exist yet (backend gap: GET /api/v1/users?search=). We pass the
+      // selected mock student's campus_id as a placeholder — this will fail
+      // with a 404 until real users exist in the database. For now the
+      // officer can enroll for themselves by leaving owner_id as their own id.
+      const result = await enrollDeviceApi({
+        serial_number: serialNumber.trim().toUpperCase(),
+        device_type: toBackendDeviceType(deviceType),
+        brand: brand.trim() || undefined,
+        model: model.trim() || undefined,
+        // Pass authUser.id so the officer enrolls under their own account
+        // until the user-search endpoint is available.
+        owner_id: authUser.id,
+      });
+
+      // Build a frontend Device shape from the backend response so the
+      // existing QRPassModal and success screen work unchanged.
+      const frontendDevice: Device = {
+        id: result.id,
+        assetId: result.asset_id,
+        serialNumber: result.serial_number,
+        brand: result.brand ?? brand,
+        model: result.model ?? model,
+        deviceType,
+        ownerId: result.owner_id,
+        ownerName: authUser.name,
+        ownerStudentId: authUser.campus_id ?? authUser.email,
+        ownerDepartment: selectedStudent.department,
+        status: result.status as Device['status'],
+        enrollmentDate: result.registered_at,
+        enrolledByOfficerBadge: activeOfficer.officerBadgeId,
+        enrolledAtGateId: currentGate.id,
+        qrPayload: result.qr_code_value,
+        notes: notes || undefined,
+      };
+
+      setEnrolledDevice(frontendDevice);
+      setStep(5);
+      showToast(`Device ${result.asset_id} enrolled successfully!`, 'success');
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Enrollment failed. Please try again.';
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
@@ -337,8 +368,8 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
               <button onClick={() => setStep(3)} className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">
                 <ArrowLeft className="h-4 w-4" /> {language === 'am' ? 'አስተካክል' : 'Edit'}
               </button>
-              <button onClick={handleConfirmEnrollment} className="flex items-center gap-2 rounded-lg bg-[var(--cg-primary)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors shadow-sm">
-                {t('generateAssetId')} <ArrowRight className="h-4 w-4" />
+              <button onClick={handleConfirmEnrollment} disabled={isSubmitting} className="flex items-center gap-2 rounded-lg bg-[var(--cg-primary)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors shadow-sm disabled:opacity-60">
+                {isSubmitting ? 'Enrolling…' : t('generateAssetId')} <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           </div>

@@ -1,17 +1,34 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { translations, Language } from '../i18n/translations';
 import { Gate, GateOfficer, Student, UserRole } from '../types';
 import { campusStore } from '../services/storage';
+import { AuthUser, BackendRole, loginApi, meApi, meToAuthUser } from '../services/authService';
+import { ApiError, clearToken, getToken, setToken } from '../services/api';
+
+// ---------------------------------------------------------------------------
+// Backend role → frontend UserRole
+// ---------------------------------------------------------------------------
+
+function toFrontendRole(r: BackendRole): UserRole {
+  if (r === 'GATE_OFFICER') return 'OFFICER';
+  if (r === 'ADMIN') return 'ADMIN';
+  return 'STUDENT'; // STUDENT + STAFF both use student portal
+}
+
+// ---------------------------------------------------------------------------
+// Context shape
+// ---------------------------------------------------------------------------
 
 interface AppContextType {
   role: UserRole;
-  setRole: (role: UserRole) => void;
   currentUser: { id: string; name: string; email: string; role: UserRole; identifier: string } | null;
+  authUser: AuthUser | null;
   isAuthenticated: boolean;
-  login: (identifier: string, password?: string, intendedRole?: UserRole) => boolean;
-  registerStudent: (data: { name: string; studentId: string; department: string; email: string; phone?: string; password?: string }) => { success: boolean; message: string };
+  isAuthLoading: boolean;
+  authError: string | null;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -36,308 +53,152 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// ---------------------------------------------------------------------------
+// localStorage helpers (SSR-safe)
+// ---------------------------------------------------------------------------
+
+function ls(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try { return window.localStorage.getItem(key); } catch { return null; }
+}
+function lsSet(key: string, v: string) {
+  if (typeof window === 'undefined') return;
+  try { window.localStorage.setItem(key, v); } catch { /* ignore */ }
+}
+function lsRemove(key: string) {
+  if (typeof window === 'undefined') return;
+  try { window.localStorage.removeItem(key); } catch { /* ignore */ }
+}
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const getStoredValue = (key: string) => {
-    if (typeof window === 'undefined') return null;
-    try {
-      return window.localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  };
+  // ── Real auth state ──────────────────────────────────────────────────────
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Load initial preferences
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return getStoredValue('cg_auth_logged_in') === 'true';
-  });
+  // ── Language ─────────────────────────────────────────────────────────────
+  const [language, setLanguageState] = useState<Language>(
+    () => (ls('cg_lang') as Language) ?? 'en',
+  );
 
-  const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string; role: UserRole; identifier: string } | null>(() => {
-    const saved = getStoredValue('cg_current_user');
-    if (saved) {
-      try { return JSON.parse(saved); } catch { return null; }
-    }
-    return null;
-  });
-
-  const [role, setRoleState] = useState<UserRole>(() => {
-    return (getStoredValue('cg_role') as UserRole) || 'OFFICER';
-  });
-
-  const [language, setLanguageState] = useState<Language>(() => {
-    // Gate officer defaults to Amharic as required by Section 27
-    const stored = getStoredValue('cg_lang') as Language;
-    if (stored) return stored;
-    return role === 'OFFICER' ? 'am' : 'en';
-  });
-
-  const [currentGateId, setCurrentGateIdState] = useState<string>(() => {
-    return getStoredValue('cg_gateId') || 'gate-1';
-  });
-
+  // ── Gate / officer / student (mock-backed for non-integrated workflows) ──
+  const [currentGateId, setCurrentGateIdState] = useState<string>(
+    () => ls('cg_gateId') ?? 'gate-1',
+  );
   const [activeOfficerId, setActiveOfficerIdState] = useState<string>('off-1');
   const [currentStudentId, setCurrentStudentIdState] = useState<string>('stud-1');
-  const [isOffline, setIsOffline] = useState<boolean>(false);
+
+  // ── UI ────────────────────────────────────────────────────────────────────
+  const [isOffline, setIsOffline] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'error' | 'info' } | null>(null);
   const [activeTab, setActiveTab] = useState<string>('gate_scan');
   const [activeDemoAction, setActiveDemoAction] = useState<string | null>(null);
 
-  // Sync listener to force re-renders when storage changes
+  // Sync mock store re-renders
   const [, setStoreTick] = useState(0);
-  useEffect(() => {
-    return campusStore.subscribe(() => setStoreTick((t) => t + 1));
+  useEffect(() => campusStore.subscribe(() => setStoreTick((t) => t + 1)), []);
+
+  // Derived mock entities
+  const gates = campusStore.getGates();
+  const currentGate = gates.find((g) => g.id === currentGateId) ?? gates[0];
+  const officers = campusStore.getOfficers();
+  const activeOfficer = officers.find((o) => o.id === activeOfficerId) ?? officers[0];
+  const students = campusStore.getStudents();
+  const currentStudent = students.find((s) => s.id === currentStudentId) ?? students[0];
+
+  // Derived auth values
+  const role: UserRole = authUser ? toFrontendRole(authUser.role) : 'STUDENT';
+  const currentUser = authUser
+    ? { id: authUser.id, name: authUser.name, email: authUser.email, role, identifier: authUser.campus_id ?? authUser.email }
+    : null;
+  const isAuthenticated = authUser !== null;
+
+  // ── Toast helper ──────────────────────────────────────────────────────────
+  const showToast = useCallback((message: string, type: 'success' | 'warning' | 'error' | 'info' = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4500);
   }, []);
 
-  const gates = campusStore.getGates();
-  const currentGate = gates.find((g) => g.id === currentGateId) || gates[0];
-
-  const officers = campusStore.getOfficers();
-  const activeOfficer = officers.find((o) => o.id === activeOfficerId) || officers[0];
-
-  const students = campusStore.getStudents();
-  const currentStudent = students.find((s) => s.id === currentStudentId) || students[0];
-
-  const setRole = (newRole: UserRole) => {
-    setRoleState(newRole);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('cg_role', newRole);
-    }
-    if (newRole === 'OFFICER') {
+  // ── Role side-effects ─────────────────────────────────────────────────────
+  const applyRoleSideEffects = useCallback((r: UserRole) => {
+    if (r === 'OFFICER') {
       setActiveTab('gate_scan');
-      if (typeof window !== 'undefined' && !window.localStorage.getItem('cg_lang_manually_set')) {
-        setLanguageState('am');
-      }
-    } else if (newRole === 'STUDENT') {
+      if (!ls('cg_lang_manually_set')) setLanguageState('am');
+    } else if (r === 'STUDENT') {
       setActiveTab('student_devices');
-    } else if (newRole === 'ADMIN') {
+    } else if (r === 'ADMIN') {
       setActiveTab('admin_dashboard');
+    }
+  }, []);
+
+  // ── Restore session on mount ──────────────────────────────────────────────
+  useEffect(() => {
+    const token = getToken();
+    if (!token) { setIsAuthLoading(false); return; }
+
+    meApi()
+      .then((me) => {
+        const user = meToAuthUser(me);
+        setAuthUser(user);
+        applyRoleSideEffects(toFrontendRole(user.role));
+      })
+      .catch(() => clearToken())
+      .finally(() => setIsAuthLoading(false));
+  }, [applyRoleSideEffects]);
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  const login = async (email: string, password: string): Promise<boolean> => {
+    setAuthError(null);
+    try {
+      const tokenResp = await loginApi(email, password);
+      setToken(tokenResp.access_token);
+      const me = await meApi();
+      const user = meToAuthUser(me);
+      setAuthUser(user);
+      applyRoleSideEffects(toFrontendRole(user.role));
+      showToast(`Welcome, ${user.name}`, 'success');
+      return true;
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Login failed. Please try again.';
+      setAuthError(message);
+      showToast(message, 'error');
+      return false;
     }
   };
 
+  // ── Logout ────────────────────────────────────────────────────────────────
+  const logout = () => {
+    clearToken();
+    setAuthUser(null);
+    lsRemove('cg_lang_manually_set');
+    showToast('Signed out of CampusGate', 'info');
+  };
+
+  // ── Language ──────────────────────────────────────────────────────────────
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('cg_lang', lang);
-      window.localStorage.setItem('cg_lang_manually_set', 'true');
-    }
+    lsSet('cg_lang', lang);
+    lsSet('cg_lang_manually_set', 'true');
   };
 
   const setCurrentGateId = (gateId: string) => {
     setCurrentGateIdState(gateId);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('cg_gateId', gateId);
-    }
-  };
-
-  const showToast = (message: string, type: 'success' | 'warning' | 'error' | 'info' = 'info') => {
-    setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 4500);
+    lsSet('cg_gateId', gateId);
   };
 
   const resetAllData = () => {
     campusStore.resetAll();
-    showToast('Demo data reset to baseline Ethiopian university registry values.', 'info');
+    showToast('Demo data reset to baseline.', 'info');
   };
 
-  const triggerDemoStep = (stepNumber: number) => {
-    setActiveDemoAction(`DEMO_${stepNumber}`);
-    if (stepNumber === 1) {
-      // Demo 1: Gate Officer enrolls a new laptop at Gate 1
-      setRole('OFFICER');
-      setCurrentGateId('gate-1');
-      setActiveTab('gate_enroll');
-      showToast('DEMO 1: Ready to enroll new personal device for student at Gate 1.', 'info');
-    } else if (stepNumber === 2) {
-      // Demo 2: Check Out laptop PF123456 at Gate 1
-      setRole('OFFICER');
-      setCurrentGateId('gate-1');
-      setActiveTab('gate_scan');
-      showToast('DEMO 2: Searching Lenovo ThinkPad (PF123456) for CHECK OUT at Gate 1.', 'info');
-    } else if (stepNumber === 3) {
-      // Demo 3: Cross-Gate Return - switch to Gate 3 and scan same device for Check In!
-      setRole('OFFICER');
-      setCurrentGateId('gate-3');
-      setActiveTab('gate_scan');
-      showToast('DEMO 3: Switched officer post to Gate 3! Ready to verify cross-gate check-in.', 'warning');
-    } else if (stepNumber === 4) {
-      // Demo 4: Scan Lost Device (Dell XPS 13, Serial 8J2M144K90)
-      setRole('OFFICER');
-      setCurrentGateId('gate-2');
-      setActiveTab('gate_scan');
-      showToast('DEMO 4: Scanning reported LOST device (8J2M144K90) to trigger security warning.', 'warning');
-    } else if (stepNumber === 5) {
-      // Demo 5: Visitor Flow
-      setRole('OFFICER');
-      setActiveTab('gate_visitors');
-      showToast('DEMO 5: Verifying digital visitor pass VP-2026-8812 at Gate.', 'info');
-    } else if (stepNumber === 6) {
-      // Demo 6: Admin Dashboard
-      setRole('ADMIN');
-      setActiveTab('admin_dashboard');
-      showToast('DEMO 6: Opened Central Security Command & Audit Trail.', 'info');
-    }
-  };
-
-  const login = (identifier: string, password?: string, intendedRole?: UserRole): boolean => {
-    const cleanId = identifier.trim().toUpperCase();
-
-    // Check if matching an officer
-    const officerMatch = officers.find(
-      (o) => o.officerBadgeId.toUpperCase() === cleanId || o.email.toUpperCase() === cleanId || o.name.toUpperCase().includes(cleanId)
-    );
-
-    // Check if matching a student
-    const studentMatch = students.find(
-      (s) => s.studentId.toUpperCase() === cleanId || s.email.toUpperCase() === cleanId || s.name.toUpperCase().includes(cleanId)
-    );
-
-    if (intendedRole === 'OFFICER' || officerMatch) {
-      const off = officerMatch || officers[0];
-      const user = {
-        id: off.id,
-        name: off.name,
-        email: off.email,
-        role: 'OFFICER' as UserRole,
-        identifier: off.officerBadgeId
-      };
-      setCurrentUser(user);
-      setActiveOfficerIdState(off.id);
-      setCurrentGateIdState(off.assignedGateId || 'gate-1');
-      setIsAuthenticated(true);
-      setRole('OFFICER');
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('cg_auth_logged_in', 'true');
-        window.localStorage.setItem('cg_current_user', JSON.stringify(user));
-      }
-      showToast(`Welcome back, Officer ${off.name} (${off.officerBadgeId})`, 'success');
-      return true;
-    }
-
-    if (intendedRole === 'STUDENT' || studentMatch) {
-      const stud = studentMatch || students[0];
-      const user = {
-        id: stud.id,
-        name: stud.name,
-        email: stud.email,
-        role: 'STUDENT' as UserRole,
-        identifier: stud.studentId
-      };
-      setCurrentUser(user);
-      setCurrentStudentIdState(stud.id);
-      setIsAuthenticated(true);
-      setRole('STUDENT');
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('cg_auth_logged_in', 'true');
-        window.localStorage.setItem('cg_current_user', JSON.stringify(user));
-      }
-      showToast(`Welcome, ${stud.name} (${stud.studentId})`, 'success');
-      return true;
-    }
-
-    if (intendedRole === 'ADMIN' || cleanId.includes('ADMIN') || cleanId.includes('SECURITY')) {
-      const user = {
-        id: 'admin-1',
-        name: 'Chief Security Administrator',
-        email: 'admin@astu.security.et',
-        role: 'ADMIN' as UserRole,
-        identifier: 'ADMIN-HQ'
-      };
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      setRole('ADMIN');
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('cg_auth_logged_in', 'true');
-        window.localStorage.setItem('cg_current_user', JSON.stringify(user));
-      }
-      showToast('Logged in as Security Administrator', 'success');
-      return true;
-    }
-
-    // Fallback: Default to student or officer depending on intendedRole
-    const fallbackRole: UserRole = intendedRole || 'STUDENT';
-    const fallbackUser = {
-      id: `usr-${Date.now()}`,
-      name: identifier,
-      email: `${identifier.toLowerCase()}@astu.edu.et`,
-      role: fallbackRole,
-      identifier: identifier
-    };
-    setCurrentUser(fallbackUser);
-    setIsAuthenticated(true);
-    setRole(fallbackRole);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('cg_auth_logged_in', 'true');
-      window.localStorage.setItem('cg_current_user', JSON.stringify(fallbackUser));
-    }
-    showToast(`Signed in as ${identifier}`, 'success');
-    return true;
-  };
-
-  const registerStudent = (data: {
-    name: string;
-    studentId: string;
-    department: string;
-    email: string;
-    phone?: string;
-    password?: string;
-  }): { success: boolean; message: string } => {
-    const cleanId = data.studentId.trim().toUpperCase();
-    const existing = students.find((s) => s.studentId.toUpperCase() === cleanId);
-    if (existing) {
-      return { success: false, message: `Student ID ${cleanId} already exists in registry.` };
-    }
-
-    const newStudent: Student = {
-      id: `stud-${Date.now()}`,
-      name: data.name.trim(),
-      email: data.email.trim(),
-      studentId: cleanId,
-      department: data.department,
-      batchYear: 2024,
-      role: 'STUDENT',
-      status: 'ACTIVE',
-      phone: data.phone || '+251 91 000 0000',
-      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
-    };
-
-    // Add to students list in memory
-    students.unshift(newStudent);
-    setCurrentStudentIdState(newStudent.id);
-
-    const user = {
-      id: newStudent.id,
-      name: newStudent.name,
-      email: newStudent.email,
-      role: 'STUDENT' as UserRole,
-      identifier: newStudent.studentId
-    };
-    setCurrentUser(user);
-    setIsAuthenticated(true);
-    setRole('STUDENT');
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('cg_auth_logged_in', 'true');
-      window.localStorage.setItem('cg_current_user', JSON.stringify(user));
-    }
-
-    showToast(`Account created for ${newStudent.name}! You are now logged in.`, 'success');
-    return { success: true, message: 'Account created successfully.' };
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem('cg_auth_logged_in');
-      window.localStorage.removeItem('cg_current_user');
-    }
-    showToast('Signed out of CampusGate', 'info');
-  };
-
-  // Translation function
+  // ── Translation ───────────────────────────────────────────────────────────
   const t = (key: keyof typeof translations.en, params?: Record<string, string>): string => {
-    const dict = translations[language] || translations.en;
-    let text = dict[key] || translations.en[key] || String(key);
+    const dict = translations[language] ?? translations.en;
+    let text = dict[key] ?? translations.en[key] ?? String(key);
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
         text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
@@ -346,37 +207,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return text;
   };
 
+  // ── Demo steps ────────────────────────────────────────────────────────────
+  const triggerDemoStep = (stepNumber: number) => {
+    setActiveDemoAction(`DEMO_${stepNumber}`);
+    if (stepNumber === 1) { setActiveTab('gate_enroll'); showToast('DEMO 1: Ready to enroll new device.', 'info'); }
+    else if (stepNumber === 2) { setActiveTab('gate_scan'); showToast('DEMO 2: Searching device for CHECK OUT.', 'info'); }
+    else if (stepNumber === 3) { setCurrentGateId('gate-3'); setActiveTab('gate_scan'); showToast('DEMO 3: Switched to Gate 3.', 'warning'); }
+    else if (stepNumber === 4) { setCurrentGateId('gate-2'); setActiveTab('gate_scan'); showToast('DEMO 4: Scanning LOST device.', 'warning'); }
+    else if (stepNumber === 5) { setActiveTab('gate_visitors'); showToast('DEMO 5: Verifying visitor pass.', 'info'); }
+    else if (stepNumber === 6) { setActiveTab('admin_dashboard'); showToast('DEMO 6: Opened Security Command.', 'info'); }
+  };
+
   return (
-    <AppContext.Provider
-      value={{
-        role,
-        setRole,
-        currentUser,
-        isAuthenticated,
-        login,
-        registerStudent,
-        logout,
-        language,
-        setLanguage,
-        t,
-        currentGateId,
-        setCurrentGateId,
-        currentGate,
-        activeOfficer,
-        setActiveOfficerId: setActiveOfficerIdState,
-        currentStudent,
-        setCurrentStudentId: setCurrentStudentIdState,
-        isOffline,
-        setIsOffline,
-        toast,
-        showToast,
-        resetAllData,
-        activeTab,
-        setActiveTab,
-        activeDemoAction,
-        triggerDemoStep
-      }}
-    >
+    <AppContext.Provider value={{
+      role, currentUser, authUser, isAuthenticated, isAuthLoading, authError,
+      login, logout,
+      language, setLanguage, t,
+      currentGateId, setCurrentGateId, currentGate,
+      activeOfficer, setActiveOfficerId: setActiveOfficerIdState,
+      currentStudent, setCurrentStudentId: setCurrentStudentIdState,
+      isOffline, setIsOffline,
+      toast, showToast,
+      resetAllData,
+      activeTab, setActiveTab,
+      activeDemoAction, triggerDemoStep,
+    }}>
       {children}
     </AppContext.Provider>
   );
