@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldAlert, Plus, X, Loader2, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { EmptyState } from '../../components/ui/EmptyState';
 import {
   listIncidentsApi, createIncidentApi, patchIncidentApi,
   IncidentRead, BackendIncidentType, BackendIncidentStatus
@@ -133,11 +134,8 @@ export const IncidentManager: React.FC = () => {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-[var(--cg-primary)]" />
           </div>
-        ) : incidents.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[var(--cg-border)] bg-[var(--cg-surface)] p-8 text-center">
-            <ShieldAlert className="mx-auto h-8 w-8 text-[var(--cg-text-muted)] mb-2" />
-            <p className="text-sm font-medium text-[var(--cg-text)]">No incidents for this filter</p>
-          </div>
+        ) : error ? null : incidents.length === 0 ? (
+          <EmptyState title="No incidents for this filter" />
         ) : (
           incidents.map((inc) => (
             <div key={inc.id} className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 space-y-3">

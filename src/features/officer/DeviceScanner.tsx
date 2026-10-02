@@ -7,6 +7,7 @@ import { Device } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { listDevicesApi, DeviceRead } from '../../services/deviceService';
 import { ApiError } from '../../services/api';
+import { searchUsersApi } from '../../services/userService';
 import { DeviceVerificationModal } from './DeviceVerificationModal';
 
 interface DeviceScannerProps {
@@ -48,6 +49,7 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
   const [searchedTerm, setSearchedTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [studentDeviceResults, setStudentDeviceResults] = useState<Device[]>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -81,6 +83,7 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
     setScanSuccess(true);
     setSearchedTerm(query.trim());
     setSearchError(null);
+    setStudentDeviceResults([]);
     setIsSearching(true);
 
     setTimeout(() => setScanSuccess(false), 600);
@@ -119,10 +122,62 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentIdQuery.trim()) return;
-    // Student ID search: use the user search to find devices by owner
-    // The backend /devices supports owner_id (UUID), not campus_id directly.
-    // We search by serial/asset_id as a fallback — show "not found" if no match.
-    searchDevice(studentIdQuery.trim().toUpperCase());
+
+    if (isOffline) {
+      showToast(
+        language === 'am'
+          ? 'ማስጠንቀቂያ: ኔትወርክ ተቋርጧል። የቀጥታ ማረጋገጫ ውስን ነው።'
+          : 'Warning: Running in LIMITED CONNECTION mode. Live sync is restricted.',
+        'warning'
+      );
+    }
+
+    const query = studentIdQuery.trim();
+    setIsScanning(false);
+    setScanSuccess(true);
+    setSearchedTerm(query);
+    setSearchError(null);
+    setStudentDeviceResults([]);
+    setIsSearching(true);
+    setTimeout(() => setScanSuccess(false), 600);
+
+    try {
+      const users = await searchUsersApi(query);
+      const eligibleUsers = users.filter((user) => user.role === 'STUDENT' || user.role === 'STAFF');
+      const exactMatches = eligibleUsers.filter(
+        (user) => user.campus_id?.toLocaleLowerCase() === query.toLocaleLowerCase()
+      );
+      const matches = exactMatches.length > 0 ? exactMatches : eligibleUsers;
+
+      if (matches.length === 0) {
+        setSearchError('No active student or staff user matched this ID.');
+        return;
+      }
+      if (matches.length > 1) {
+        setSearchError('Multiple users matched. Enter the exact campus ID.');
+        return;
+      }
+
+      const user = matches[0];
+      const devices = await listDevicesApi({ owner_id: user.id });
+      if (devices.length === 0) {
+        setSearchError(`No devices are registered to ${user.full_name}.`);
+        return;
+      }
+
+      setStudentDeviceResults(devices.map((device) => ({
+        ...toFrontendDevice(device),
+        ownerName: user.full_name,
+        ownerStudentId: user.campus_id ?? user.email,
+      })));
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Student device search failed. Please try again.';
+      setSearchError(message);
+      showToast(message, 'error');
+    } finally {
+      setIsSearching(false);
+      setIsScanning(true);
+    }
   };
 
   const scanTabs = [
@@ -285,6 +340,29 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
                 className="h-12 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3.5 font-mono text-sm font-semibold text-[var(--cg-text)] focus:border-[var(--cg-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--cg-primary)]/10"
               />
             </div>
+            {studentDeviceResults.length > 0 && (
+              <div className="space-y-2" aria-live="polite">
+                <p className="text-xs font-semibold text-[var(--cg-text)]">Devices registered to this user</p>
+                {studentDeviceResults.map((device) => (
+                  <button
+                    key={device.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDevice(device);
+                      setIsUnknownDevice(false);
+                      setIsModalOpen(true);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 py-2.5 text-left transition-colors hover:border-[var(--cg-primary)] hover:bg-[var(--cg-surface-muted)]"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-semibold text-[var(--cg-text)]">{device.assetId}</span>
+                      <span className="block truncate font-mono text-[11px] text-[var(--cg-text-muted)]">{device.serialNumber}</span>
+                    </span>
+                    <span className="shrink-0 text-[10px] font-semibold text-[var(--cg-text-muted)]">{device.status}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             {searchError && (
               <p className="text-xs text-[var(--cg-danger)]">{searchError}</p>
             )}

@@ -8,6 +8,7 @@ import {
 import { Device } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { campusStore } from '../../services/storage';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { QRPassModal } from '../../components/QRPassModal';
 import { listDevicesApi, reportLostApi, DeviceRead } from '../../services/deviceService';
 import { getDeviceMovementsApi, DeviceMovementRead } from '../../services/movementService';
@@ -53,6 +54,7 @@ export const StudentView: React.FC = () => {
   const [selectedDeviceForHistory, setSelectedDeviceForHistory] = useState<string | null>(null);
   const [apiMovements, setApiMovements] = useState<DeviceMovementRead[]>([]);
   const [movementsLoading, setMovementsLoading] = useState(false);
+  const [movementsError, setMovementsError] = useState<string | null>(null);
 
   const requests = campusStore.getRequests().filter(
     (r) => r.applicantId === currentStudent.studentId
@@ -63,7 +65,7 @@ export const StudentView: React.FC = () => {
     setDevicesLoading(true);
     setDevicesError(null);
     try {
-      const results = await listDevicesApi();
+      const results = await listDevicesApi({ owner_id: authUser.id });
       setApiDevices(results);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to load devices.';
@@ -77,11 +79,13 @@ export const StudentView: React.FC = () => {
 
   const loadMovements = useCallback(async (deviceId: string) => {
     setMovementsLoading(true);
+    setMovementsError(null);
     try {
       const results = await getDeviceMovementsApi(deviceId);
       setApiMovements(results);
-    } catch {
+    } catch (err) {
       setApiMovements([]);
+      setMovementsError(err instanceof ApiError ? err.message : 'Failed to load movement history.');
     } finally {
       setMovementsLoading(false);
     }
@@ -292,13 +296,7 @@ export const StudentView: React.FC = () => {
                   <button onClick={loadDevices} className="ml-3 underline text-xs">Retry</button>
                 </div>
               ) : devices.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--cg-border)] bg-[var(--cg-surface)] py-16 text-center">
-                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--cg-surface-muted)]">
-                    <Laptop className="h-7 w-7 text-[var(--cg-text-subtle)]" />
-                  </div>
-                  <p className="text-sm font-semibold text-[var(--cg-text)]">No devices enrolled yet</p>
-                  <p className="mt-1 max-w-xs text-xs text-[var(--cg-text-muted)]">{t('noRegisteredDevices')}</p>
-                </div>
+                <EmptyState title="No devices enrolled yet" description={t('noRegisteredDevices')} />
               ) : (
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   {devices.map((dev) => {
@@ -366,12 +364,17 @@ export const StudentView: React.FC = () => {
                 <div className="flex items-center justify-center py-10">
                   <Loader2 className="h-5 w-5 animate-spin text-[var(--cg-primary)]" />
                 </div>
+              ) : movementsError ? (
+                <div className="rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] p-4 text-sm text-[var(--cg-danger)]">
+                  {movementsError}
+                  {selectedDeviceForHistory && <button onClick={() => loadMovements(selectedDeviceForHistory)} className="ml-3 underline text-xs">Retry</button>}
+                </div>
               ) : !selectedDeviceForHistory ? (
                 <div className="py-10 text-center text-sm text-[var(--cg-text-muted)]">
                   No device selected. Use the History button on a device card.
                 </div>
               ) : apiMovements.length === 0 ? (
-                <div className="py-10 text-center text-sm text-[var(--cg-text-muted)]">No movement history yet.</div>
+                <EmptyState title="No movement history yet" />
               ) : (
                 <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-[var(--cg-border)]">
                   {apiMovements.map((mov) => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowDownLeft, ArrowUpRight, Search, MapPin, Laptop, Loader2, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { listMovementsApi, DeviceMovementRead } from '../../services/movementService';
 import { ApiError } from '../../services/api';
 
@@ -111,10 +112,12 @@ export const GateTransactions: React.FC = () => {
                     <Loader2 className="mx-auto h-5 w-5 animate-spin text-[var(--cg-primary)]" />
                   </td>
                 </tr>
+              ) : error ? (
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-[var(--cg-danger)]">Unable to show transactions until the request succeeds.</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-[var(--cg-text-muted)]">
-                    No transactions match the current filters.
+                    <EmptyState title="No transactions match the current filters" />
                   </td>
                 </tr>
               ) : (

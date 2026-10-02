@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, LogOut, LogIn, X, Loader2, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { EmptyState } from '../../components/ui/EmptyState';
 import {
   listVisitsApi, createVisitApi, checkInVisitApi, checkOutVisitApi,
   VisitRead, BackendVisitStatus, BackendIdentificationType
@@ -183,10 +184,8 @@ export const VisitorManager: React.FC = () => {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-[var(--cg-primary)]" />
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--cg-border)] bg-[var(--cg-surface)] p-8 text-center text-sm text-[var(--cg-text-muted)]">
-          No visits found.
-        </div>
+      ) : error ? null : filtered.length === 0 ? (
+        <EmptyState title="No visits found" />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((vis) => (
