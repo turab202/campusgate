@@ -3,12 +3,12 @@ import {
   Search, CheckCircle2, Laptop, QrCode,
   ArrowRight, ArrowLeft, User, AlertCircle, RotateCcw
 } from 'lucide-react';
-import { Device, DeviceType, Student } from '../../types';
+import { Device, DeviceType } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { campusStore } from '../../services/storage';
 import { QRPassModal } from '../../components/QRPassModal';
 import { enrollDeviceApi, toBackendDeviceType } from '../../services/deviceService';
 import { ApiError } from '../../services/api';
+import { searchUsersApi, UserSearchResult } from '../../services/userService';
 
 interface DeviceEnrollmentProps {
   initialSerial?: string;
@@ -20,7 +20,9 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
   const [deviceType, setDeviceType] = useState<DeviceType>('Laptop');
   const [brand, setBrand] = useState('Lenovo');
   const [model, setModel] = useState('ThinkPad E14 Gen 4');
@@ -30,16 +32,22 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
   const [showQrModal, setShowQrModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const students = campusStore.getStudents();
-  const filteredStudents = students.filter(
-    (s) =>
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.department.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleSearch = async (q: string) => {
+    setSearchQuery(q);
+    if (q.trim().length < 2) { setSearchResults([]); return; }
+    setIsSearching(true);
+    try {
+      const results = await searchUsersApi(q.trim());
+      setSearchResults(results);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
-  const handleSelectStudent = (stud: Student) => {
-    setSelectedStudent(stud);
+  const handleSelectUser = (u: UserSearchResult) => {
+    setSelectedUser(u);
     setErrorMessage(null);
     setStep(2);
   };
@@ -56,28 +64,18 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
   };
 
   const handleConfirmEnrollment = async () => {
-    if (!selectedStudent || !authUser) return;
+    if (!selectedUser || !authUser) return;
     setIsSubmitting(true);
     setErrorMessage(null);
     try {
-      // GATE_OFFICER enrolling on behalf of a student.
-      // Backend requires owner_id (UUID). The user-search endpoint does not
-      // exist yet (backend gap: GET /api/v1/users?search=). We pass the
-      // selected mock student's campus_id as a placeholder — this will fail
-      // with a 404 until real users exist in the database. For now the
-      // officer can enroll for themselves by leaving owner_id as their own id.
       const result = await enrollDeviceApi({
         serial_number: serialNumber.trim().toUpperCase(),
         device_type: toBackendDeviceType(deviceType),
         brand: brand.trim() || undefined,
         model: model.trim() || undefined,
-        // Pass authUser.id so the officer enrolls under their own account
-        // until the user-search endpoint is available.
-        owner_id: authUser.id,
+        owner_id: selectedUser.id,
       });
 
-      // Build a frontend Device shape from the backend response so the
-      // existing QRPassModal and success screen work unchanged.
       const frontendDevice: Device = {
         id: result.id,
         assetId: result.asset_id,
@@ -86,9 +84,9 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
         model: result.model ?? model,
         deviceType,
         ownerId: result.owner_id,
-        ownerName: authUser.name,
-        ownerStudentId: authUser.campus_id ?? authUser.email,
-        ownerDepartment: selectedStudent.department,
+        ownerName: selectedUser.full_name,
+        ownerStudentId: selectedUser.campus_id ?? selectedUser.email,
+        ownerDepartment: '',
         status: result.status as Device['status'],
         enrollmentDate: result.registered_at,
         enrolledByOfficerBadge: activeOfficer.officerBadgeId,
@@ -109,8 +107,9 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
   };
 
   const resetForm = () => {
-    setStep(1); setSelectedStudent(null); setSerialNumber('');
+    setStep(1); setSelectedUser(null); setSerialNumber('');
     setEnrolledDevice(null); setErrorMessage(null); setSearchQuery('');
+    setSearchResults([]);
   };
 
   const stepLabels = [
@@ -176,7 +175,7 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
           </div>
         )}
 
-        {/* Step 1: Search student */}
+        {/* Step 1: Search student/staff */}
         {step === 1 && (
           <div className="space-y-5">
             <div>
@@ -184,7 +183,7 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
                 {language === 'am' ? 'ተማሪ ወይም ሰራተኛ ይፈልጉ' : 'Search Student or Staff Registry'}
               </h3>
               <p className="text-xs text-[var(--cg-text-muted)]">
-                {language === 'am' ? 'የተማሪውን መታወቂያ ወይም ስም ያስገቡ' : 'Search by Student ID, name, or department.'}
+                {language === 'am' ? 'የተማሪውን መታወቂያ ወይም ስም ያስገቡ' : 'Search by campus ID, name, or email (min 2 characters).'}
               </p>
             </div>
             <div className="relative">
@@ -192,55 +191,64 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 placeholder={t('enterStudentPlaceholder') + ' or name…'}
                 className="h-12 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] pl-10 pr-4 text-sm text-[var(--cg-text)] focus:border-[var(--cg-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--cg-primary)]/10"
               />
+              {isSearching && (
+                <span className="absolute right-3.5 top-3.5 text-xs text-[var(--cg-text-muted)]">Searching…</span>
+              )}
             </div>
             <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto md:grid-cols-2">
-              {filteredStudents.map((stud) => (
+              {searchResults.map((u) => (
                 <button
-                  key={stud.id}
-                  onClick={() => handleSelectStudent(stud)}
+                  key={u.id}
+                  onClick={() => handleSelectUser(u)}
                   className="flex items-center gap-3 rounded-xl border border-[var(--cg-border)] p-3.5 text-left transition-colors hover:border-[var(--cg-primary)] hover:bg-[var(--cg-surface-muted)]"
                 >
-                  <img src={stud.avatarUrl} alt={stud.name} className="h-12 w-12 rounded-xl object-cover border border-[var(--cg-border)]" />
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--cg-surface-muted)] border border-[var(--cg-border)]">
+                    <User className="h-6 w-6 text-[var(--cg-text-muted)]" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-sm text-[var(--cg-text)] truncate">{stud.name}</span>
-                      <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-[var(--cg-success)]">{stud.status}</span>
+                      <span className="font-semibold text-sm text-[var(--cg-text)] truncate">{u.full_name}</span>
+                      <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-[var(--cg-success)]">{u.role}</span>
                     </div>
-                    <span className="block font-mono text-xs text-[var(--cg-primary)]">{stud.studentId}</span>
-                    <span className="block text-[11px] text-[var(--cg-text-muted)] truncate">{stud.department}</span>
+                    <span className="block font-mono text-xs text-[var(--cg-primary)]">{u.campus_id ?? '—'}</span>
+                    <span className="block text-[11px] text-[var(--cg-text-muted)] truncate">{u.email}</span>
                   </div>
                 </button>
               ))}
+              {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
+                <p className="col-span-2 py-4 text-center text-xs text-[var(--cg-text-muted)]">No users found for &ldquo;{searchQuery}&rdquo;</p>
+              )}
             </div>
           </div>
         )}
 
-        {/* Step 2: Verify student */}
-        {step === 2 && selectedStudent && (
+        {/* Step 2: Verify user */}
+        {step === 2 && selectedUser && (
           <div className="space-y-5">
             <div>
               <h3 className="text-base font-semibold text-[var(--cg-text)] mb-1">{t('step2VerifyStudent')}</h3>
               <p className="text-xs text-[var(--cg-text-muted)]">
-                {language === 'am' ? 'ተማሪው ከያዘው መታወቂያ ጋር ያረጋግጡ' : 'Verify student physical ID card matches registrar records.'}
+                {language === 'am' ? 'ተማሪው ከያዘው መታወቂያ ጋር ያረጋግጡ' : 'Verify the physical ID card matches the registry record.'}
               </p>
             </div>
             <div className="flex flex-col items-center gap-5 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-5 md:flex-row md:items-start">
-              <img src={selectedStudent.avatarUrl} alt={selectedStudent.name} className="h-24 w-24 rounded-xl object-cover border-2 border-[var(--cg-border)]" />
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border-2 border-[var(--cg-border)] bg-[var(--cg-surface)]">
+                <User className="h-12 w-12 text-[var(--cg-text-muted)]" />
+              </div>
               <div className="flex-1 space-y-2 text-center md:text-left">
                 <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                  <h4 className="font-semibold text-lg text-[var(--cg-text)]">{selectedStudent.name}</h4>
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-[var(--cg-success)]">{selectedStudent.status}</span>
+                  <h4 className="font-semibold text-lg text-[var(--cg-text)]">{selectedUser.full_name}</h4>
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-[var(--cg-success)]">{selectedUser.role}</span>
                 </div>
                 <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
                   {[
-                    { label: 'Student ID', value: selectedStudent.studentId, mono: true },
-                    { label: 'Department', value: selectedStudent.department },
-                    { label: 'Email', value: selectedStudent.email, mono: true },
-                    { label: 'Phone', value: selectedStudent.phone || '—', mono: true },
+                    { label: 'Campus ID', value: selectedUser.campus_id ?? '—', mono: true },
+                    { label: 'Role', value: selectedUser.role },
+                    { label: 'Email', value: selectedUser.email, mono: true },
                   ].map(({ label, value, mono }) => (
                     <div key={label}>
                       <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{label}</span>
@@ -256,7 +264,7 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
             </div>
             <div className="flex items-center justify-between border-t border-[var(--cg-border)] pt-4">
               <button onClick={() => setStep(1)} className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">
-                <ArrowLeft className="h-4 w-4" /> {language === 'am' ? 'ተማሪ ቀይር' : 'Change Student'}
+                <ArrowLeft className="h-4 w-4" /> {language === 'am' ? 'ተማሪ ቀይር' : 'Change User'}
               </button>
               <button onClick={() => setStep(3)} className="flex items-center gap-2 rounded-lg bg-[var(--cg-primary)] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
                 {language === 'am' ? 'ወደ መሳሪያ መረጃ' : 'Proceed to Device Info'} <ArrowRight className="h-4 w-4" />
@@ -327,7 +335,7 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
         )}
 
         {/* Step 4: Review */}
-        {step === 4 && selectedStudent && (
+        {step === 4 && selectedUser && (
           <div className="space-y-5">
             <div>
               <h3 className="text-base font-semibold text-[var(--cg-text)] mb-1">{t('step4Review')}</h3>
@@ -340,11 +348,11 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
                 <div className="flex items-center gap-3">
                   <User className="h-4 w-4 text-[var(--cg-primary)]" />
                   <div>
-                    <span className="block font-semibold text-sm text-[var(--cg-text)]">{selectedStudent.name}</span>
-                    <span className="block font-mono text-xs text-[var(--cg-primary)]">{selectedStudent.studentId} · {selectedStudent.department}</span>
+                    <span className="block font-semibold text-sm text-[var(--cg-text)]">{selectedUser.full_name}</span>
+                    <span className="block font-mono text-xs text-[var(--cg-primary)]">{selectedUser.campus_id ?? selectedUser.email}</span>
                   </div>
                 </div>
-                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-[var(--cg-success)]">{selectedStudent.status}</span>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-[var(--cg-success)]">{selectedUser.role}</span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
                 {[
@@ -391,7 +399,7 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
                 {enrolledDevice.assetId}
               </span>
               <p className="mt-2 text-xs text-[var(--cg-text-muted)]">
-                Assigned to: <strong className="text-[var(--cg-text)]">{enrolledDevice.ownerName}</strong>
+                Assigned to: <strong className="text-[var(--cg-text)]">{selectedUser?.full_name ?? enrolledDevice.ownerName}</strong>
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3">

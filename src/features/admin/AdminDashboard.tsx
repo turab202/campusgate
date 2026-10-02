@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield, Download, Search, ArrowDownLeft, ArrowUpRight,
-  Clock, Check, X, Activity, Database, GitBranch, FileCheck, ScrollText,
-  TrendingUp, AlertTriangle, Users, Zap
+  Activity, Database, GitBranch, FileCheck, ScrollText,
+  TrendingUp, AlertTriangle, Users, Zap, Loader2, RefreshCw, Plus
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { campusStore } from '../../services/storage';
-import { Device } from '../../types';
-import { QRPassModal } from '../../components/QRPassModal';
-import { recoverDeviceApi } from '../../services/deviceService';
+import { listDevicesApi, recoverDeviceApi, DeviceRead } from '../../services/deviceService';
+import { listMovementsApi, DeviceMovementRead } from '../../services/movementService';
+import { listGatesApi, createGateApi, listAssignmentsApi, createAssignmentApi, GateRead, GateAssignmentRead } from '../../services/gateService';
+import { listAuditLogsApi, AuditLogRead } from '../../services/auditLogService';
+import { searchUsersApi, UserSearchResult } from '../../services/userService';
 import { ApiError } from '../../services/api';
 
 export const AdminDashboard: React.FC = () => {
@@ -16,56 +18,105 @@ export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DEVICES' | 'GATES' | 'REQUESTS' | 'AUDIT'>('OVERVIEW');
   const [deviceSearch, setDeviceSearch] = useState('');
   const [deviceStatusFilter, setDeviceStatusFilter] = useState('ALL');
-  const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<Device | null>(null);
-  const [selectedGateForShift, setSelectedGateForShift] = useState('gate-1');
-  const [selectedOfficerForShift, setSelectedOfficerForShift] = useState('off-1');
-  const [selectedShiftTime, setSelectedShiftTime] = useState('08:00 — 16:00');
+  const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<string | null>(null);
 
-  const devices = campusStore.getDevices();
-  const movements = campusStore.getMovements();
-  const gates = campusStore.getGates();
-  const officers = campusStore.getOfficers();
-  const shifts = campusStore.getShifts();
-  const incidents = campusStore.getIncidents();
-  const auditLogs = campusStore.getAuditLogs();
+  // Gate assignment form
+  const [newGateName, setNewGateName] = useState('');
+  const [newGateCode, setNewGateCode] = useState('');
+  const [newGateLocation, setNewGateLocation] = useState('');
+  const [assignOfficerId, setAssignOfficerId] = useState('');
+  const [assignGateId, setAssignGateId] = useState('');
+  const [assignStart, setAssignStart] = useState('');
+  const [assignEnd, setAssignEnd] = useState('');
+  const [officerSearch, setOfficerSearch] = useState('');
+  const [officerResults, setOfficerResults] = useState<UserSearchResult[]>([]);
+
+  // Real API state
+  const [apiDevices, setApiDevices] = useState<DeviceRead[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [apiMovements, setApiMovements] = useState<DeviceMovementRead[]>([]);
+  const [apiGates, setApiGates] = useState<GateRead[]>([]);
+  const [apiAssignments, setApiAssignments] = useState<GateAssignmentRead[]>([]);
+  const [apiAuditLogs, setApiAuditLogs] = useState<AuditLogRead[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [gatesLoading, setGatesLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadDevices = useCallback(async () => {
+    setDevicesLoading(true);
+    try {
+      const [devs, movs] = await Promise.all([listDevicesApi(), listMovementsApi()]);
+      setApiDevices(devs);
+      setApiMovements(movs);
+    } catch { /* silent */ }
+    finally { setDevicesLoading(false); }
+  }, []);
+
+  const loadGates = useCallback(async () => {
+    setGatesLoading(true);
+    try {
+      const [gates, assignments] = await Promise.all([listGatesApi(), listAssignmentsApi()]);
+      setApiGates(gates);
+      setApiAssignments(assignments);
+    } catch { /* silent */ }
+    finally { setGatesLoading(false); }
+  }, []);
+
+  const loadAudit = useCallback(async () => {
+    setAuditLoading(true);
+    try {
+      const logs = await listAuditLogsApi();
+      setApiAuditLogs(logs);
+    } catch { /* silent */ }
+    finally { setAuditLoading(false); }
+  }, []);
+
+  useEffect(() => { loadDevices(); }, [loadDevices]);
+  useEffect(() => { if (activeTab === 'GATES') loadGates(); }, [activeTab, loadGates]);
+  useEffect(() => { if (activeTab === 'AUDIT') loadAudit(); }, [activeTab, loadAudit]);
+
+  const handleOfficerSearch = async (q: string) => {
+    setOfficerSearch(q);
+    if (q.length < 2) { setOfficerResults([]); return; }
+    try {
+      const results = await searchUsersApi(q);
+      setOfficerResults(results.filter((u) => u.role === 'GATE_OFFICER'));
+    } catch { setOfficerResults([]); }
+  };
+
+  // Keep mock data for OVERVIEW stats and REQUESTS tab (not integrated yet)
+  const mockGates = campusStore.getGates();
+  const mockMovements = campusStore.getMovements();
   const requests = campusStore.getRequests();
 
-  const totalEnrolled = devices.length;
-  const currentlyInside = devices.filter((d) => d.status === 'INSIDE_CAMPUS').length;
-  const currentlyOutside = devices.filter((d) => d.status === 'OUTSIDE_CAMPUS').length;
-  const currentlyLost = devices.filter((d) => d.status === 'LOST').length;
-  const totalCheckInsToday = gates.reduce((acc, g) => acc + g.todayStats.checkIns, 0);
-  const totalCheckOutsToday = gates.reduce((acc, g) => acc + g.todayStats.checkOuts, 0);
-  const totalIncidentsOpen = incidents.filter((i) => i.status === 'OPEN').length;
+  const totalEnrolled = apiDevices.length;
+  const currentlyInside = apiDevices.filter((d) => d.status === 'INSIDE_CAMPUS').length;
+  const currentlyOutside = apiDevices.filter((d) => d.status === 'OUTSIDE_CAMPUS').length;
+  const currentlyLost = apiDevices.filter((d) => d.status === 'LOST' || d.status === 'REPORTED_LOST').length;
+  const totalCheckInsToday = mockGates.reduce((acc, g) => acc + g.todayStats.checkIns, 0);
+  const totalCheckOutsToday = mockGates.reduce((acc, g) => acc + g.todayStats.checkOuts, 0);
+  const totalIncidentsOpen = 0; // not loaded here
 
-  const filteredDevices = devices.filter((d) => {
+  const filteredDevices = apiDevices.filter((d) => {
     if (deviceStatusFilter !== 'ALL' && d.status !== deviceStatusFilter) return false;
     if (deviceSearch) {
       const q = deviceSearch.toLowerCase();
       return (
-        d.assetId.toLowerCase().includes(q) ||
-        d.serialNumber.toLowerCase().includes(q) ||
-        d.ownerName.toLowerCase().includes(q) ||
-        d.ownerStudentId.toLowerCase().includes(q) ||
-        d.brand.toLowerCase().includes(q) ||
-        d.model.toLowerCase().includes(q)
+        d.asset_id.toLowerCase().includes(q) ||
+        d.serial_number.toLowerCase().includes(q) ||
+        (d.brand ?? '').toLowerCase().includes(q) ||
+        (d.model ?? '').toLowerCase().includes(q)
       );
     }
     return true;
   });
 
-  const handleAssignShift = (e: React.FormEvent) => {
-    e.preventDefault();
-    campusStore.assignOfficerShift(selectedOfficerForShift, selectedGateForShift, selectedShiftTime);
-    showToast('Shift assignment updated.', 'success');
-  };
-
   const handleResolveLost = async (devId: string) => {
     try {
       await recoverDeviceApi(devId, 'INSIDE_CAMPUS', 'Cleared by administrator after verification.');
-      // Also update local mock store so the UI reflects the change immediately
-      campusStore.resolveLostDevice(devId, 'Security Administrator');
       showToast('Lost flag cleared. Device restored to INSIDE CAMPUS.', 'success');
+      loadDevices();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Recovery failed.';
       showToast(message, 'error');
@@ -82,9 +133,45 @@ export const AdminDashboard: React.FC = () => {
     showToast('Exit request rejected.', 'warning');
   };
 
+  const handleCreateGate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGateName.trim() || !newGateCode.trim()) return;
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await createGateApi({ name: newGateName.trim(), code: newGateCode.trim(), location: newGateLocation.trim() || undefined });
+      showToast(`Gate ${newGateCode} created.`, 'success');
+      setNewGateName(''); setNewGateCode(''); setNewGateLocation('');
+      loadGates();
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Failed to create gate.');
+    } finally { setSubmitting(false); }
+  };
+
+  const handleCreateAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignOfficerId || !assignGateId || !assignStart) return;
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await createAssignmentApi({
+        officer_id: assignOfficerId,
+        gate_id: assignGateId,
+        start_time: new Date(assignStart).toISOString(),
+        end_time: assignEnd ? new Date(assignEnd).toISOString() : undefined,
+      });
+      showToast('Shift assignment created.', 'success');
+      setAssignOfficerId(''); setAssignGateId(''); setAssignStart(''); setAssignEnd('');
+      setOfficerSearch(''); setOfficerResults([]);
+      loadGates();
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : 'Failed to create assignment.');
+    } finally { setSubmitting(false); }
+  };
+
   const statusBadge = (status: string) => {
     if (status === 'INSIDE_CAMPUS') return 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]';
-    if (status === 'LOST') return 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]';
+    if (status === 'LOST' || status === 'REPORTED_LOST') return 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]';
     return 'bg-[var(--cg-info-bg)] text-[var(--cg-info)] border-[var(--cg-info-border)]';
   };
 
@@ -174,12 +261,12 @@ export const AdminDashboard: React.FC = () => {
             <h2 className="text-sm font-bold text-[var(--cg-text)]">{t('liveGateMonitoring')}</h2>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cg-success-border)] bg-[var(--cg-success-bg)] px-2.5 py-1 text-[11px] font-semibold text-[var(--cg-success)]">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--cg-success)] animate-pulse" />
-              3 Stations Online
+              {mockGates.length} Stations Online
             </span>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {gates.map((g) => (
+            {mockGates.map((g) => (
               <div key={g.id} className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)] space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
@@ -189,19 +276,6 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <span className="rounded-full bg-[var(--cg-success-bg)] border border-[var(--cg-success-border)] px-2.5 py-1 text-[10px] font-semibold text-[var(--cg-success)]">ACTIVE</span>
                 </div>
-
-                <div className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3 text-xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">On-Duty Officer</span>
-                    <span className="font-mono font-bold text-[var(--cg-primary)] text-[11px]">{g.currentAssignedOfficer?.officerBadge}</span>
-                  </div>
-                  <div className="font-semibold text-[var(--cg-text)]">{g.currentAssignedOfficer?.officerName}</div>
-                  <div className="flex items-center gap-1 text-[11px] text-[var(--cg-text-muted)]">
-                    <Clock className="h-3 w-3" />
-                    {g.currentAssignedOfficer?.shift}
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-2 gap-2 text-center text-xs">
                   {[
                     { label: 'Entries', value: g.todayStats.checkIns, cls: 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]' },
@@ -219,7 +293,7 @@ export const AdminDashboard: React.FC = () => {
             ))}
           </div>
 
-          {/* Activity feed */}
+          {/* Activity feed — real movements */}
           <div className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-sm)]">
             <div className="flex items-center justify-between border-b border-[var(--cg-border)] px-5 py-4">
               <h3 className="text-sm font-bold text-[var(--cg-text)]">Recent Gate Activity Feed</h3>
@@ -229,8 +303,9 @@ export const AdminDashboard: React.FC = () => {
               </span>
             </div>
             <div className="divide-y divide-[var(--cg-border)]">
-              {movements.slice(0, 5).map((mov) => {
-                const isIn = mov.type === 'CHECK_IN';
+              {apiMovements.slice(0, 5).map((mov) => {
+                const isIn = mov.movement_type === 'CHECK_IN';
+                const ts = new Date(mov.occurred_at).toLocaleString();
                 return (
                   <div key={mov.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
                     <div className="flex items-center gap-3">
@@ -238,14 +313,17 @@ export const AdminDashboard: React.FC = () => {
                         {isIn ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-[var(--cg-text)]">{mov.ownerName} · {mov.deviceModel}</div>
-                        <div className="text-[11px] text-[var(--cg-text-muted)]">{isIn ? 'Entered' : 'Exited'} {mov.gateName} · {mov.officerName}</div>
+                        <div className="text-xs font-semibold text-[var(--cg-text)] font-mono">{mov.device_id.slice(0, 8)}…</div>
+                        <div className="text-[11px] text-[var(--cg-text-muted)]">{isIn ? 'Entered' : 'Exited'} · Gate {mov.gate_id.slice(0, 8)}…</div>
                       </div>
                     </div>
-                    <span className="font-mono text-[11px] text-[var(--cg-text-muted)]">{mov.timestamp}</span>
+                    <span className="font-mono text-[11px] text-[var(--cg-text-muted)]">{ts}</span>
                   </div>
                 );
               })}
+              {apiMovements.length === 0 && !devicesLoading && (
+                <div className="px-5 py-6 text-center text-xs text-[var(--cg-text-muted)]">No recent activity.</div>
+              )}
             </div>
           </div>
         </div>
@@ -272,6 +350,10 @@ export const AdminDashboard: React.FC = () => {
                 <option value="OUTSIDE_CAMPUS">Outside Campus</option>
                 <option value="LOST">Reported Lost</option>
               </select>
+              <button onClick={loadDevices} disabled={devicesLoading}
+                className="flex items-center gap-1.5 h-9 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-[var(--cg-text-muted)] hover:bg-[var(--cg-border)] transition-colors disabled:opacity-50">
+                <RefreshCw className={`h-3.5 w-3.5 ${devicesLoading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
           </div>
 
@@ -280,43 +362,35 @@ export const AdminDashboard: React.FC = () => {
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-[var(--cg-border)] bg-[var(--cg-surface-muted)]">
                   <tr>
-                    {['Asset ID', 'Device & Model', 'Serial Number', 'Owner', 'Status', 'Last Activity', 'Actions'].map((h) => (
+                    {['Asset ID', 'Device & Model', 'Serial Number', 'Owner ID', 'Status', 'Enrolled', 'Actions'].map((h) => (
                       <th key={h} className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--cg-border)]">
-                  {filteredDevices.map((dev) => (
+                  {devicesLoading ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-[var(--cg-primary)]" /></td></tr>
+                  ) : filteredDevices.length === 0 ? (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-[var(--cg-text-muted)]">No devices found.</td></tr>
+                  ) : filteredDevices.map((dev) => (
                     <tr key={dev.id} className="hover:bg-[var(--cg-surface-muted)] transition-colors">
-                      <td className="px-4 py-3 font-mono font-bold text-[var(--cg-primary)] text-[11px]">{dev.assetId}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-[var(--cg-primary)] text-[11px]">{dev.asset_id}</td>
                       <td className="px-4 py-3">
                         <div className="font-semibold text-[var(--cg-text)]">{dev.brand} {dev.model}</div>
-                        <div className="text-[11px] text-[var(--cg-text-muted)]">{dev.deviceType}</div>
+                        <div className="text-[11px] text-[var(--cg-text-muted)]">{dev.device_type}</div>
                       </td>
-                      <td className="px-4 py-3 font-mono text-[var(--cg-text)]">{dev.serialNumber}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-[var(--cg-text)]">{dev.ownerName}</div>
-                        <div className="font-mono text-[11px] text-[var(--cg-primary)]">{dev.ownerStudentId}</div>
-                      </td>
+                      <td className="px-4 py-3 font-mono text-[var(--cg-text)]">{dev.serial_number}</td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-[var(--cg-text-muted)]">{dev.owner_id.slice(0, 8)}…</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${statusBadge(dev.status)}`}>
                           {dev.status.replace(/_/g, ' ')}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-[11px] text-[var(--cg-text-muted)]">
-                        {dev.lastMovement ? (
-                          <div>
-                            <span>{dev.lastMovement.type === 'CHECK_IN' ? '↓ Entry' : '↑ Exit'} · {dev.lastMovement.gateName}</span>
-                            <span className="block font-mono text-[10px]">{dev.lastMovement.timestamp}</span>
-                          </div>
-                        ) : 'Enrolled'}
+                        {new Date(dev.registered_at).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3 text-right space-x-1.5">
-                        <button onClick={() => setSelectedDeviceForQr(dev)}
-                          className="rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--cg-text)] hover:bg-[var(--cg-border)] transition-colors">
-                          QR Pass
-                        </button>
-                        {dev.status === 'LOST' && (
+                        {(dev.status === 'LOST' || dev.status === 'REPORTED_LOST') && (
                           <button onClick={() => handleResolveLost(dev.id)}
                             className="rounded-lg border border-[var(--cg-success-border)] bg-[var(--cg-success-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--cg-success)] hover:opacity-80 transition-opacity">
                             Clear Lost
@@ -335,68 +409,146 @@ export const AdminDashboard: React.FC = () => {
       {/* GATES TAB */}
       {activeTab === 'GATES' && (
         <div className="space-y-4">
+          {formError && (
+            <div className="rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] p-4 text-sm text-[var(--cg-danger)]">{formError}</div>
+          )}
+
+          {/* Create Gate */}
           <div className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-6 shadow-[var(--cg-shadow-sm)] space-y-4">
-            <div>
-              <h2 className="text-sm font-bold text-[var(--cg-text)]">Station Shift Assignment</h2>
-              <p className="mt-0.5 text-xs text-[var(--cg-text-muted)] max-w-2xl">Officers rotate dynamically through scheduled assignments while accessing the same centralized database.</p>
-            </div>
-            <form onSubmit={handleAssignShift} className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-              {[
-                { label: 'Gate Station', el: (
-                  <select value={selectedGateForShift} onChange={(e) => setSelectedGateForShift(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-xs text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)] transition-colors">
-                    {gates.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                )},
-                { label: 'Assigned Officer', el: (
-                  <select value={selectedOfficerForShift} onChange={(e) => setSelectedOfficerForShift(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-xs text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)] transition-colors">
-                    {officers.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.officerBadgeId})</option>)}
-                  </select>
-                )},
-                { label: 'Duty Shift', el: (
-                  <select value={selectedShiftTime} onChange={(e) => setSelectedShiftTime(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-xs text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)] transition-colors">
-                    <option value="08:00 — 16:00">Morning (08:00 — 16:00)</option>
-                    <option value="16:00 — 00:00">Evening (16:00 — 00:00)</option>
-                    <option value="00:00 — 08:00">Night (00:00 — 08:00)</option>
-                  </select>
-                )},
-              ].map(({ label, el }) => (
-                <div key={label} className="space-y-1.5">
-                  <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">{label}</label>
-                  {el}
-                </div>
-              ))}
+            <h2 className="text-sm font-bold text-[var(--cg-text)]">Create New Gate</h2>
+            <form onSubmit={handleCreateGate} className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">Gate Name *</label>
+                <input required value={newGateName} onChange={(e) => setNewGateName(e.target.value)} placeholder="e.g. Gate 4"
+                  className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-xs text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">Gate Code *</label>
+                <input required value={newGateCode} onChange={(e) => setNewGateCode(e.target.value.toUpperCase())} placeholder="e.g. GATE-04"
+                  className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-xs font-mono text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">Location</label>
+                <input value={newGateLocation} onChange={(e) => setNewGateLocation(e.target.value)} placeholder="e.g. East Campus"
+                  className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-xs text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
+              </div>
               <div className="flex items-end">
-                <button type="submit" className="h-10 w-full rounded-xl bg-[var(--cg-primary)] text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
-                  Update Assignment
+                <button type="submit" disabled={submitting}
+                  className="flex items-center gap-1.5 h-10 w-full rounded-xl bg-[var(--cg-primary)] text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors disabled:opacity-60">
+                  <Plus className="h-3.5 w-3.5" /> {submitting ? 'Creating…' : 'Create Gate'}
                 </button>
               </div>
             </form>
           </div>
 
+          {/* Gates list */}
           <div className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)]">
-            <h3 className="mb-3 text-sm font-bold text-[var(--cg-text)]">Current Station Assignments</h3>
-            <div className="divide-y divide-[var(--cg-border)]">
-              {shifts.map((s) => (
-                <div key={s.id} className="flex items-center justify-between py-3.5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--cg-primary-light)]">
-                      <span className="h-2 w-2 rounded-full bg-[var(--cg-success)]" />
-                    </div>
-                    <div>
-                      <span className="block font-semibold text-sm text-[var(--cg-text)]">{s.gateName}</span>
-                      <span className="block text-[11px] text-[var(--cg-text-muted)]">{s.shiftName} · {s.timeRange}</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="block font-semibold text-sm text-[var(--cg-text)]">{s.assignedOfficerName}</span>
-                    <span className="block font-mono text-[11px] text-[var(--cg-primary)]">{s.assignedOfficerBadge}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-[var(--cg-text)]">Registered Gates</h3>
+              <button onClick={loadGates} disabled={gatesLoading}
+                className="flex items-center gap-1 text-xs text-[var(--cg-text-muted)] hover:text-[var(--cg-text)]">
+                <RefreshCw className={`h-3.5 w-3.5 ${gatesLoading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
+            {gatesLoading ? (
+              <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[var(--cg-primary)]" /></div>
+            ) : apiGates.length === 0 ? (
+              <p className="text-center text-xs text-[var(--cg-text-muted)] py-6">No gates registered yet.</p>
+            ) : (
+              <div className="divide-y divide-[var(--cg-border)]">
+                {apiGates.map((g) => (
+                  <div key={g.id} className="flex items-center justify-between py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--cg-primary-light)]">
+                        <span className="h-2 w-2 rounded-full bg-[var(--cg-success)]" />
+                      </div>
+                      <div>
+                        <span className="block font-semibold text-sm text-[var(--cg-text)]">{g.name}</span>
+                        <span className="block text-[11px] text-[var(--cg-text-muted)]">{g.location ?? 'No location'}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="block font-mono text-xs font-bold text-[var(--cg-primary)]">{g.code}</span>
+                      <span className={`block text-[10px] font-semibold ${g.is_active ? 'text-[var(--cg-success)]' : 'text-[var(--cg-danger)]'}`}>
+                        {g.is_active ? 'ACTIVE' : 'INACTIVE'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Create Assignment */}
+          <div className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-6 shadow-[var(--cg-shadow-sm)] space-y-4">
+            <div>
+              <h2 className="text-sm font-bold text-[var(--cg-text)]">Station Shift Assignment</h2>
+              <p className="mt-0.5 text-xs text-[var(--cg-text-muted)] max-w-2xl">Assign a gate officer to a gate for a specific time window.</p>
+            </div>
+            <form onSubmit={handleCreateAssignment} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">Officer Search</label>
+                <input value={officerSearch} onChange={(e) => handleOfficerSearch(e.target.value)} placeholder="Search officer name…"
+                  className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-xs text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
+                {officerResults.length > 0 && (
+                  <div className="rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-sm">
+                    {officerResults.map((o) => (
+                      <button key={o.id} type="button"
+                        onClick={() => { setAssignOfficerId(o.id); setOfficerSearch(o.full_name); setOfficerResults([]); }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-[var(--cg-surface-muted)] text-left">
+                        <span className="font-semibold text-[var(--cg-text)]">{o.full_name}</span>
+                        <span className="text-[var(--cg-text-muted)]">{o.campus_id}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">Gate Station *</label>
+                <select required value={assignGateId} onChange={(e) => setAssignGateId(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-xs text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]">
+                  <option value="">Select gate…</option>
+                  {apiGates.filter((g) => g.is_active).map((g) => (
+                    <option key={g.id} value={g.id}>{g.name} ({g.code})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">Start Time *</label>
+                <input required type="datetime-local" value={assignStart} onChange={(e) => setAssignStart(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-xs text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
+              </div>
+              <div className="flex items-end">
+                <button type="submit" disabled={submitting || !assignOfficerId}
+                  className="h-10 w-full rounded-xl bg-[var(--cg-primary)] text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors disabled:opacity-60">
+                  {submitting ? 'Assigning…' : 'Assign Officer'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Assignments list */}
+          <div className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)]">
+            <h3 className="mb-3 text-sm font-bold text-[var(--cg-text)]">Current Assignments</h3>
+            {apiAssignments.length === 0 ? (
+              <p className="text-center text-xs text-[var(--cg-text-muted)] py-6">No assignments yet.</p>
+            ) : (
+              <div className="divide-y divide-[var(--cg-border)]">
+                {apiAssignments.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between py-3.5">
+                    <div>
+                      <span className="block font-mono text-xs font-semibold text-[var(--cg-primary)]">{a.officer_id.slice(0, 8)}…</span>
+                      <span className="block text-[11px] text-[var(--cg-text-muted)]">
+                        Gate: {a.gate_id.slice(0, 8)}… · {new Date(a.start_time).toLocaleString()}
+                      </span>
+                    </div>
+                    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${a.is_active ? 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]' : 'bg-[var(--cg-surface-muted)] text-[var(--cg-text-muted)] border-[var(--cg-border)]'}`}>
+                      {a.is_active ? 'ACTIVE' : 'ENDED'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -433,11 +585,11 @@ export const AdminDashboard: React.FC = () => {
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => handleRejectRequest(req.id)}
                         className="flex items-center gap-1 rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--cg-danger)] hover:opacity-80 transition-opacity">
-                        <X className="h-3.5 w-3.5" /> Reject
+                        Reject
                       </button>
                       <button onClick={() => handleApproveRequest(req.id)}
                         className="flex items-center gap-1 rounded-xl bg-[var(--cg-primary)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
-                        <Check className="h-3.5 w-3.5" /> Approve
+                        Approve
                       </button>
                     </div>
                   )}
@@ -456,9 +608,10 @@ export const AdminDashboard: React.FC = () => {
               <h2 className="text-sm font-bold text-[var(--cg-text)]">{t('auditTrail')}</h2>
               <p className="mt-0.5 text-xs text-[var(--cg-text-muted)]">Immutable audit event generated on every security operation.</p>
             </div>
-            <button onClick={() => showToast('Audit trail exported as CSV.', 'info')}
-              className="flex items-center gap-1.5 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-xs font-semibold text-[var(--cg-text)] hover:bg-[var(--cg-border)] transition-colors">
-              {t('exportCsv')}
+            <button onClick={loadAudit} disabled={auditLoading}
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-xs font-semibold text-[var(--cg-text)] hover:bg-[var(--cg-border)] transition-colors disabled:opacity-50">
+              <RefreshCw className={`h-3.5 w-3.5 ${auditLoading ? 'animate-spin' : ''}`} />
+              Refresh
             </button>
           </div>
 
@@ -467,28 +620,30 @@ export const AdminDashboard: React.FC = () => {
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-[var(--cg-border)] bg-[var(--cg-surface-muted)]">
                   <tr>
-                    {[t('timestamp'), t('actor'), t('action'), t('resource'), 'Gate', 'Details', t('result')].map((h) => (
+                    {[t('timestamp'), 'Actor ID', t('action'), 'Entity Type', 'Entity ID', 'Description'].map((h) => (
                       <th key={h} className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--cg-border)]">
-                  {auditLogs.map((log) => (
+                  {auditLoading ? (
+                    <tr><td colSpan={6} className="px-4 py-8 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-[var(--cg-primary)]" /></td></tr>
+                  ) : apiAuditLogs.length === 0 ? (
+                    <tr><td colSpan={6} className="px-4 py-8 text-center text-[var(--cg-text-muted)]">No audit logs found.</td></tr>
+                  ) : apiAuditLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-[var(--cg-surface-muted)] transition-colors">
-                      <td className="px-4 py-3 font-mono text-[11px] text-[var(--cg-text-muted)] whitespace-nowrap">{log.timestamp}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-[var(--cg-text)]">{log.actorBadgeOrEmail}</div>
-                        <div className="text-[10px] font-bold text-[var(--cg-primary)]">{log.actorRole}</div>
+                      <td className="px-4 py-3 font-mono text-[11px] text-[var(--cg-text-muted)] whitespace-nowrap">
+                        {new Date(log.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-[var(--cg-text-muted)]">
+                        {log.actor_id ? log.actor_id.slice(0, 8) + '…' : 'System'}
                       </td>
                       <td className="px-4 py-3 font-mono font-semibold text-[11px] text-[var(--cg-text)] whitespace-nowrap">{log.action}</td>
-                      <td className="px-4 py-3 text-[var(--cg-text-muted)] max-w-[160px] truncate">{log.resourceId}</td>
-                      <td className="px-4 py-3 text-[var(--cg-text-muted)] whitespace-nowrap">{log.gateName}</td>
-                      <td className="px-4 py-3 text-[var(--cg-text-muted)] max-w-xs truncate">{log.details}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${log.result === 'SUCCESS' ? 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]' : log.result === 'WARNING' ? 'bg-[var(--cg-warning-bg)] text-[var(--cg-warning)] border-[var(--cg-warning-border)]' : 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]'}`}>
-                          {log.result}
-                        </span>
+                      <td className="px-4 py-3 text-[var(--cg-text-muted)]">{log.entity_type}</td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-[var(--cg-text-muted)] max-w-[120px] truncate">
+                        {log.entity_id ?? '—'}
                       </td>
+                      <td className="px-4 py-3 text-[var(--cg-text-muted)] max-w-xs truncate">{log.description ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -498,7 +653,6 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      <QRPassModal device={selectedDeviceForQr} isOpen={!!selectedDeviceForQr} onClose={() => setSelectedDeviceForQr(null)} />
     </div>
   );
 };

@@ -1,19 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Laptop, QrCode, AlertTriangle, Plus,
   ArrowUpRight, ArrowDownLeft, MapPin, X,
   Package, Clock, FileText, TrendingUp, Shield,
-  ChevronRight, GraduationCap
+  Loader2, GraduationCap
 } from 'lucide-react';
 import { Device } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { campusStore } from '../../services/storage';
 import { QRPassModal } from '../../components/QRPassModal';
-import { reportLostApi } from '../../services/deviceService';
+import { listDevicesApi, reportLostApi, DeviceRead } from '../../services/deviceService';
+import { getDeviceMovementsApi, DeviceMovementRead } from '../../services/movementService';
 import { ApiError } from '../../services/api';
 
+/** Map backend DeviceRead to the frontend Device shape used by QRPassModal. */
+function toFrontendDevice(d: DeviceRead): Device {
+  return {
+    id: d.id,
+    assetId: d.asset_id,
+    serialNumber: d.serial_number,
+    brand: d.brand ?? '',
+    model: d.model ?? '',
+    deviceType: d.device_type as Device['deviceType'],
+    ownerId: d.owner_id,
+    ownerName: '',
+    ownerStudentId: '',
+    ownerDepartment: '',
+    status: d.status as Device['status'],
+    enrollmentDate: d.registered_at,
+    enrolledByOfficerBadge: '',
+    enrolledAtGateId: '',
+    qrPayload: d.qr_code_value,
+  };
+}
+
 export const StudentView: React.FC = () => {
-  const { t, language, currentStudent, showToast } = useApp();
+  const { t, language, currentStudent, authUser, showToast } = useApp();
   const [activeTab, setActiveTab] = useState<'DEVICES' | 'HISTORY' | 'REQUESTS'>('DEVICES');
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<Device | null>(null);
   const [deviceToReportLost, setDeviceToReportLost] = useState<Device | null>(null);
@@ -23,19 +45,58 @@ export const StudentView: React.FC = () => {
   const [reqReason, setReqReason] = useState('Research Project Exhibition & Capstone Defense');
   const [reqReturnDate, setReqReturnDate] = useState('2026-09-30');
 
-  const devices = campusStore.getDevices().filter(
-    (d) => d.ownerStudentId === currentStudent.studentId || d.ownerId === currentStudent.id
-  );
-  const movements = campusStore.getMovements().filter(
-    (m) => m.ownerStudentId === currentStudent.studentId
-  );
+  // Real API state
+  const [apiDevices, setApiDevices] = useState<DeviceRead[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [devicesError, setDevicesError] = useState<string | null>(null);
+
+  const [selectedDeviceForHistory, setSelectedDeviceForHistory] = useState<string | null>(null);
+  const [apiMovements, setApiMovements] = useState<DeviceMovementRead[]>([]);
+  const [movementsLoading, setMovementsLoading] = useState(false);
+
   const requests = campusStore.getRequests().filter(
     (r) => r.applicantId === currentStudent.studentId
   );
 
-  const insideCount = devices.filter((d) => d.status === 'INSIDE_CAMPUS').length;
-  const outsideCount = devices.filter((d) => d.status === 'OUTSIDE_CAMPUS').length;
-  const lostCount = devices.filter((d) => d.status === 'LOST').length;
+  const loadDevices = useCallback(async () => {
+    if (!authUser) return;
+    setDevicesLoading(true);
+    setDevicesError(null);
+    try {
+      const results = await listDevicesApi();
+      setApiDevices(results);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to load devices.';
+      setDevicesError(message);
+    } finally {
+      setDevicesLoading(false);
+    }
+  }, [authUser]);
+
+  useEffect(() => { loadDevices(); }, [loadDevices]);
+
+  const loadMovements = useCallback(async (deviceId: string) => {
+    setMovementsLoading(true);
+    try {
+      const results = await getDeviceMovementsApi(deviceId);
+      setApiMovements(results);
+    } catch {
+      setApiMovements([]);
+    } finally {
+      setMovementsLoading(false);
+    }
+  }, []);
+
+  const handleSelectDeviceForHistory = (deviceId: string) => {
+    setSelectedDeviceForHistory(deviceId);
+    loadMovements(deviceId);
+    setActiveTab('HISTORY');
+  };
+
+  const devices = apiDevices.map(toFrontendDevice);
+  const insideCount = apiDevices.filter((d) => d.status === 'INSIDE_CAMPUS').length;
+  const outsideCount = apiDevices.filter((d) => d.status === 'OUTSIDE_CAMPUS').length;
+  const lostCount = apiDevices.filter((d) => d.status === 'LOST' || d.status === 'REPORTED_LOST').length;
 
   const handleConfirmLost = async () => {
     if (!deviceToReportLost) return;
@@ -44,10 +105,9 @@ export const StudentView: React.FC = () => {
         deviceToReportLost.id,
         'Device reported as lost by owner via student portal.',
       );
-      // Also update local mock store so the UI reflects the change immediately
-      campusStore.reportLostDevice(deviceToReportLost.id, currentStudent.name);
       setDeviceToReportLost(null);
       showToast('Device status updated to LOST across all gate terminals.', 'warning');
+      loadDevices();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to report device as lost.';
       setDeviceToReportLost(null);
@@ -80,7 +140,7 @@ export const StudentView: React.FC = () => {
 
   const navItems = [
     { id: 'DEVICES' as const, label: t('navMyDevices'), icon: Package, count: devices.length, desc: 'Enrolled devices' },
-    { id: 'HISTORY' as const, label: t('navHistory'), icon: Clock, count: movements.length, desc: 'Movement timeline' },
+    { id: 'HISTORY' as const, label: t('navHistory'), icon: Clock, count: apiMovements.length, desc: 'Movement timeline' },
     { id: 'REQUESTS' as const, label: t('navRequests'), icon: FileText, count: requests.length, desc: 'Exit authorizations' },
   ];
 
@@ -222,7 +282,16 @@ export const StudentView: React.FC = () => {
           {/* DEVICES TAB */}
           {activeTab === 'DEVICES' && (
             <div className="space-y-4">
-              {devices.length === 0 ? (
+              {devicesLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-[var(--cg-primary)]" />
+                </div>
+              ) : devicesError ? (
+                <div className="rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] p-4 text-sm text-[var(--cg-danger)]">
+                  {devicesError}
+                  <button onClick={loadDevices} className="ml-3 underline text-xs">Retry</button>
+                </div>
+              ) : devices.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--cg-border)] bg-[var(--cg-surface)] py-16 text-center">
                   <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--cg-surface-muted)]">
                     <Laptop className="h-7 w-7 text-[var(--cg-text-subtle)]" />
@@ -253,21 +322,20 @@ export const StudentView: React.FC = () => {
                               <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">Serial</span>
                               <span className="font-mono font-semibold text-[var(--cg-text)]">{dev.serialNumber}</span>
                             </div>
-                            {dev.lastMovement && (
-                              <div className="flex items-center justify-between border-t border-[var(--cg-border)] pt-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">Last Gate</span>
-                                <span className="text-[var(--cg-text-muted)]">{dev.lastMovement.type === 'CHECK_IN' ? '↓ Entry' : '↑ Exit'} · {dev.lastMovement.gateName}</span>
-                              </div>
-                            )}
                           </div>
-                          {dev.notes && <p className="text-[11px] italic text-[var(--cg-text-muted)]">{dev.notes}</p>}
                         </div>
                         <div className="mt-4 flex items-center justify-between border-t border-[var(--cg-border)] pt-3">
-                          <button onClick={() => setSelectedDeviceForQr(dev)}
-                            className="flex items-center gap-1.5 rounded-xl bg-[var(--cg-primary)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
-                            <QrCode className="h-3.5 w-3.5" />{t('viewQr')}
-                          </button>
-                          {dev.status !== 'LOST' ? (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setSelectedDeviceForQr(dev)}
+                              className="flex items-center gap-1.5 rounded-xl bg-[var(--cg-primary)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
+                              <QrCode className="h-3.5 w-3.5" />{t('viewQr')}
+                            </button>
+                            <button onClick={() => handleSelectDeviceForHistory(dev.id)}
+                              className="flex items-center gap-1.5 rounded-xl border border-[var(--cg-border)] px-3 py-2 text-xs font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">
+                              <Clock className="h-3.5 w-3.5" /> History
+                            </button>
+                          </div>
+                          {dev.status !== 'LOST' && dev.status !== 'REPORTED_LOST' ? (
                             <button onClick={() => setDeviceToReportLost(dev)}
                               className="flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium text-[var(--cg-danger)] hover:bg-[var(--cg-danger-bg)] transition-colors">
                               <AlertTriangle className="h-3.5 w-3.5" />{t('reportLostBtn')}
@@ -289,15 +357,26 @@ export const StudentView: React.FC = () => {
             <div className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)]">
               <div className="mb-5 border-b border-[var(--cg-border)] pb-4">
                 <p className="text-xs text-[var(--cg-text-muted)]">
-                  {language === 'am' ? 'የመሳሪያዎችዎ ሙሉ የፍተሻ ታሪክ' : 'Complete timeline of verified check-ins and check-outs across all campus gates.'}
+                  {selectedDeviceForHistory
+                    ? (language === 'am' ? 'የተመረጠው መሳሪያ የፍተሻ ታሪክ' : 'Movement history for selected device.')
+                    : (language === 'am' ? 'መሳሪያ ይምረጡ' : 'Select a device from the Devices tab to view its movement history.')}
                 </p>
               </div>
-              {movements.length === 0 ? (
+              {movementsLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-[var(--cg-primary)]" />
+                </div>
+              ) : !selectedDeviceForHistory ? (
+                <div className="py-10 text-center text-sm text-[var(--cg-text-muted)]">
+                  No device selected. Use the History button on a device card.
+                </div>
+              ) : apiMovements.length === 0 ? (
                 <div className="py-10 text-center text-sm text-[var(--cg-text-muted)]">No movement history yet.</div>
               ) : (
                 <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-[var(--cg-border)]">
-                  {movements.map((mov) => {
-                    const isIn = mov.type === 'CHECK_IN';
+                  {apiMovements.map((mov) => {
+                    const isIn = mov.movement_type === 'CHECK_IN';
+                    const ts = new Date(mov.occurred_at).toLocaleString();
                     return (
                       <div key={mov.id} className="relative">
                         <div className={`absolute -left-6 top-3 flex h-4 w-4 items-center justify-center rounded-full border-2 border-[var(--cg-surface)] shadow-[var(--cg-shadow-xs)] ${isIn ? 'bg-[var(--cg-success)]' : 'bg-[var(--cg-info)]'}`} />
@@ -307,15 +386,14 @@ export const StudentView: React.FC = () => {
                               {isIn ? <ArrowDownLeft className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
                               {isIn ? 'CHECK-IN · ENTRY' : 'CHECK-OUT · EXIT'}
                             </span>
-                            <span className="font-mono text-[11px] text-[var(--cg-text-muted)]">{mov.timestamp}</span>
+                            <span className="font-mono text-[11px] text-[var(--cg-text-muted)]">{ts}</span>
                           </div>
-                          <div className="font-semibold text-sm text-[var(--cg-text)]">{mov.deviceModel} <span className="font-mono text-xs text-[var(--cg-primary)]">({mov.deviceAssetId})</span></div>
-                          <div className="flex items-center justify-between text-xs text-[var(--cg-text-muted)] flex-wrap gap-1">
-                            <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /><strong className="text-[var(--cg-text)]">{mov.gateName}</strong></span>
-                            <span>Officer: {mov.officerName} ({mov.officerBadge})</span>
+                          <div className="flex items-center gap-1 text-xs text-[var(--cg-text-muted)]">
+                            <MapPin className="h-3.5 w-3.5" />
+                            <span className="font-mono text-[10px] text-[var(--cg-text-muted)]">Gate ID: {mov.gate_id.slice(0, 8)}…</span>
                           </div>
-                          {mov.crossGateNote && (
-                            <div className="rounded-lg border border-[var(--cg-warning-border)] bg-[var(--cg-warning-bg)] p-2 text-[11px] font-medium text-[var(--cg-warning)]">{mov.crossGateNote}</div>
+                          {mov.notes && (
+                            <div className="rounded-lg border border-[var(--cg-warning-border)] bg-[var(--cg-warning-bg)] p-2 text-[11px] font-medium text-[var(--cg-warning)]">{mov.notes}</div>
                           )}
                         </div>
                       </div>

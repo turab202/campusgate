@@ -1,12 +1,14 @@
 import uuid
+from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
 from app.db.session import get_db
-from app.models.enums import UserRole
+from app.models.enums import UserRole, VisitStatus
 from app.models.user import User
 from app.models.visit import Visit
 from app.schemas.visitor import VisitActionRequest, VisitCreateRequest, VisitRead
@@ -20,10 +22,8 @@ from app.services.visitor_service import (
 
 router = APIRouter(prefix="/visits", tags=["visits"])
 
+_LIST_LIMIT = 200
 
-# ---------------------------------------------------------------------------
-# Role guards
-# ---------------------------------------------------------------------------
 
 def _require_create_role(user: Annotated[User, Depends(get_current_user)]) -> User:
     if user.role not in (UserRole.STUDENT, UserRole.STAFF, UserRole.ADMIN):
@@ -43,9 +43,41 @@ def _require_officer(user: Annotated[User, Depends(get_current_user)]) -> User:
     return user
 
 
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
+def _require_officer_or_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if user.role not in (UserRole.GATE_OFFICER, UserRole.ADMIN):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Gate officers and administrators only")
+    return user
+
+
+@router.get("", response_model=list[VisitRead], summary="List visits with optional filters")
+def list_visits(
+    visit_status: VisitStatus | None = Query(None, alias="status"),
+    host_user_id: uuid.UUID | None = Query(None),
+    visitor_id: uuid.UUID | None = Query(None),
+    on_date: date | None = Query(None, description="Filter by expected_start_at date (YYYY-MM-DD)"),
+    db: Session = Depends(get_db),
+    actor: User = Depends(_require_officer_or_admin),
+):
+    """
+    GATE_OFFICER and ADMIN can list visits.
+    Supports filtering by status, host, visitor, and date.
+    """
+    q = select(Visit)
+
+    if visit_status is not None:
+        q = q.where(Visit.status == visit_status)
+    if host_user_id is not None:
+        q = q.where(Visit.host_user_id == host_user_id)
+    if visitor_id is not None:
+        q = q.where(Visit.visitor_id == visitor_id)
+    if on_date is not None:
+        q = q.where(Visit.expected_start_at >= on_date).where(
+            Visit.expected_start_at < on_date + timedelta(days=1)
+        )
+
+    q = q.order_by(Visit.created_at.desc()).limit(_LIST_LIMIT)
+    return db.execute(q).scalars().all()
+
 
 @router.post("", response_model=VisitRead, status_code=status.HTTP_201_CREATED)
 def create(

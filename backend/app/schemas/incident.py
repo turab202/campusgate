@@ -18,7 +18,7 @@ _RECOVERABLE_STATUSES = {DeviceStatus.INSIDE_CAMPUS, DeviceStatus.OUTSIDE_CAMPUS
 
 class IncidentCreate(BaseModel):
     device_id: uuid.UUID | None = None
-    reported_by: uuid.UUID
+    reported_by: uuid.UUID | None = None  # ignored — always overridden by authenticated actor
     gate_id: uuid.UUID | None = None
     incident_type: IncidentType
     description: str

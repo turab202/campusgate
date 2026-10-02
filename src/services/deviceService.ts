@@ -123,6 +123,23 @@ export interface EnrollDeviceRequest {
 // API calls
 // ---------------------------------------------------------------------------
 
+export interface DeviceListFilters {
+  serial?: string;
+  asset_id?: string;
+  owner_id?: string;
+  status?: BackendDeviceStatus;
+}
+
+export async function listDevicesApi(filters: DeviceListFilters = {}): Promise<DeviceRead[]> {
+  const params = new URLSearchParams();
+  if (filters.serial) params.set('serial', filters.serial);
+  if (filters.asset_id) params.set('asset_id', filters.asset_id);
+  if (filters.owner_id) params.set('owner_id', filters.owner_id);
+  if (filters.status) params.set('status', filters.status);
+  const qs = params.toString();
+  return api.get<DeviceRead[]>(`/devices${qs ? `?${qs}` : ''}`);
+}
+
 export async function enrollDeviceApi(body: EnrollDeviceRequest): Promise<DeviceRead> {
   return api.post<DeviceRead>('/devices', body);
 }

@@ -1,15 +1,37 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Camera, QrCode, Search, AlertTriangle, CheckCircle2,
-  User, Hash, Laptop, ShieldAlert
+  User, Hash, Laptop, ShieldAlert, Loader2
 } from 'lucide-react';
-import { Device, Student } from '../../types';
+import { Device } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { campusStore } from '../../services/storage';
+import { listDevicesApi, DeviceRead } from '../../services/deviceService';
+import { ApiError } from '../../services/api';
 import { DeviceVerificationModal } from './DeviceVerificationModal';
 
 interface DeviceScannerProps {
   onNavigateToEnroll: (serial?: string) => void;
+}
+
+/** Map a backend DeviceRead to the frontend Device shape expected by DeviceVerificationModal. */
+function toFrontendDevice(d: DeviceRead): Device {
+  return {
+    id: d.id,
+    assetId: d.asset_id,
+    serialNumber: d.serial_number,
+    brand: d.brand ?? '',
+    model: d.model ?? '',
+    deviceType: d.device_type as Device['deviceType'],
+    ownerId: d.owner_id,
+    ownerName: '',          // not returned by list endpoint — shown as blank
+    ownerStudentId: '',     // not returned by list endpoint
+    ownerDepartment: '',
+    status: d.status as Device['status'],
+    enrollmentDate: d.registered_at,
+    enrolledByOfficerBadge: '',
+    enrolledAtGateId: '',
+    qrPayload: d.qr_code_value,
+  };
 }
 
 export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll }) => {
@@ -24,8 +46,8 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUnknownDevice, setIsUnknownDevice] = useState(false);
   const [searchedTerm, setSearchedTerm] = useState('');
-  const [isOwnerMismatch, setIsOwnerMismatch] = useState(false);
-  const [presentedStudent, setPresentedStudent] = useState<Student | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -43,7 +65,9 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
     return () => { if (stream) stream.getTracks().forEach((t) => t.stop()); };
   }, [scanTab]);
 
-  const triggerScanResult = (identifier: string, isMismatch = false, customStudentId?: string) => {
+  const searchDevice = async (query: string) => {
+    if (!query.trim()) return;
+
     if (isOffline) {
       showToast(
         language === 'am'
@@ -55,49 +79,50 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
 
     setIsScanning(false);
     setScanSuccess(true);
-    setSearchedTerm(identifier);
+    setSearchedTerm(query.trim());
+    setSearchError(null);
+    setIsSearching(true);
 
-    setTimeout(() => {
-      setScanSuccess(false);
-      setIsScanning(true);
+    setTimeout(() => setScanSuccess(false), 600);
 
-      const dev =
-        campusStore.getDeviceByAssetId(identifier) ||
-        campusStore.getDeviceBySerial(identifier) ||
-        campusStore.searchDevice(identifier);
+    try {
+      // Try serial first, then asset_id
+      let results = await listDevicesApi({ serial: query.trim() });
+      if (results.length === 0) {
+        results = await listDevicesApi({ asset_id: query.trim() });
+      }
 
-      if (dev) {
+      if (results.length > 0) {
         setIsUnknownDevice(false);
-        setSelectedDevice(dev);
-        if (isMismatch) {
-          setIsOwnerMismatch(true);
-          const stud = campusStore.getStudents().find((s) => s.studentId === customStudentId) || campusStore.getStudents()[3];
-          setPresentedStudent(stud);
-        } else {
-          setIsOwnerMismatch(false);
-          setPresentedStudent(null);
-        }
+        setSelectedDevice(toFrontendDevice(results[0]));
       } else {
         setSelectedDevice(null);
         setIsUnknownDevice(true);
-        setIsOwnerMismatch(false);
       }
       setIsModalOpen(true);
-    }, 500);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Search failed. Please try again.';
+      setSearchError(message);
+      showToast(message, 'error');
+    } finally {
+      setIsSearching(false);
+      setIsScanning(true);
+    }
   };
 
   const handleSerialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!serialQuery.trim()) return;
-    triggerScanResult(serialQuery.trim());
+    searchDevice(serialQuery.trim().toUpperCase());
   };
 
-  const handleStudentSubmit = (e: React.FormEvent) => {
+  const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentIdQuery.trim()) return;
-    const cleanId = studentIdQuery.trim().toUpperCase();
-    const dev = campusStore.getDevices().find((d) => d.ownerStudentId.toUpperCase() === cleanId);
-    triggerScanResult(dev ? dev.assetId : cleanId);
+    // Student ID search: use the user search to find devices by owner
+    // The backend /devices supports owner_id (UUID), not campus_id directly.
+    // We search by serial/asset_id as a fallback — show "not found" if no match.
+    searchDevice(studentIdQuery.trim().toUpperCase());
   };
 
   const scanTabs = [
@@ -221,7 +246,7 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
           <form onSubmit={handleSerialSubmit} className="mx-auto max-w-md space-y-4 py-4">
             <div className="space-y-2">
               <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--cg-text-muted)]">
-                {t('serialNumber')}
+                {t('serialNumber')} / Asset ID
               </label>
               <input
                 type="text"
@@ -231,12 +256,16 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
                 className="h-12 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3.5 font-mono text-sm font-semibold text-[var(--cg-text)] focus:border-[var(--cg-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--cg-primary)]/10"
               />
             </div>
+            {searchError && (
+              <p className="text-xs text-[var(--cg-danger)]">{searchError}</p>
+            )}
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors"
+              disabled={isSearching}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors disabled:opacity-60"
             >
-              <Search className="h-4 w-4" />
-              {t('searchButton')}
+              {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              {isSearching ? 'Searching…' : t('searchButton')}
             </button>
           </form>
         )}
@@ -256,34 +285,39 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
                 className="h-12 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3.5 font-mono text-sm font-semibold text-[var(--cg-text)] focus:border-[var(--cg-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--cg-primary)]/10"
               />
             </div>
+            {searchError && (
+              <p className="text-xs text-[var(--cg-danger)]">{searchError}</p>
+            )}
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors"
+              disabled={isSearching}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors disabled:opacity-60"
             >
-              <Search className="h-4 w-4" />
-              {language === 'am' ? 'የተማሪውን መሳሪያዎች ፈልግ' : 'Search Student Devices'}
+              {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              {isSearching ? 'Searching…' : language === 'am' ? 'የተማሪውን መሳሪያዎች ፈልግ' : 'Search Student Devices'}
             </button>
           </form>
         )}
 
-        {/* Quick test scenarios */}
+        {/* Quick test scenarios — serial numbers from real seeded data */}
         <div className="border-t border-[var(--cg-border)] pt-4">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--cg-text-muted)]">
-            Quick Test Scenarios
+            Quick Search Examples
           </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              { serial: 'PF123456', label: 'Lenovo ThinkPad T14', sub: 'Zahra M. — INSIDE', color: 'border-[var(--cg-border)]', icon: Laptop },
-              { serial: 'C02K901XYZ', label: 'MacBook Pro (Check In)', sub: 'Abebe K. — OUTSIDE', color: 'border-[var(--cg-info)]', icon: CheckCircle2 },
-              { serial: '8J2M144K90', label: 'Dell XPS 13 — LOST', sub: 'Hana T. — REPORTED LOST', color: 'border-[var(--cg-danger)]', icon: ShieldAlert },
-              { serial: 'NEW-ASUS-9988X', label: 'Unknown Device', sub: 'Triggers enroll flow', color: 'border-[var(--cg-warning)]', icon: AlertTriangle },
-              { serial: '5CD9280J9X', label: 'Owner Mismatch Test', sub: 'Bearer ≠ Registered Owner', color: 'border-[var(--cg-border)]', icon: User, mismatch: true },
-              { serial: 'EP-88210-LAB', label: 'Epson Lab Projector', sub: 'University equipment', color: 'border-[var(--cg-border)]', icon: QrCode },
-            ].map(({ serial, label, sub, color, icon: Icon, mismatch }) => (
+              { serial: 'PF123456', label: 'Lenovo ThinkPad T14', sub: 'Search by serial', color: 'border-[var(--cg-border)]', icon: Laptop },
+              { serial: 'C02K901XYZ', label: 'MacBook Pro', sub: 'Search by serial', color: 'border-[var(--cg-info)]', icon: CheckCircle2 },
+              { serial: '8J2M144K90', label: 'Dell XPS 13', sub: 'Search by serial', color: 'border-[var(--cg-danger)]', icon: ShieldAlert },
+              { serial: 'NEW-DEVICE-001', label: 'Unknown Device', sub: 'Triggers enroll flow', color: 'border-[var(--cg-warning)]', icon: AlertTriangle },
+              { serial: '5CD9280J9X', label: 'HP EliteBook 840', sub: 'Search by serial', color: 'border-[var(--cg-border)]', icon: User },
+              { serial: 'EP-88210-LAB', label: 'Epson Projector', sub: 'University equipment', color: 'border-[var(--cg-border)]', icon: QrCode },
+            ].map(({ serial, label, sub, color, icon: Icon }) => (
               <button
                 key={serial}
-                onClick={() => triggerScanResult(serial, mismatch, mismatch ? 'ASTU-2024-01234' : undefined)}
-                className={`flex items-center gap-2.5 rounded-lg border ${color} bg-[var(--cg-surface)] p-2.5 text-left text-xs transition-colors hover:bg-[var(--cg-surface-muted)]`}
+                onClick={() => searchDevice(serial)}
+                disabled={isSearching}
+                className={`flex items-center gap-2.5 rounded-lg border ${color} bg-[var(--cg-surface)] p-2.5 text-left text-xs transition-colors hover:bg-[var(--cg-surface-muted)] disabled:opacity-50`}
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--cg-surface-muted)]">
                   <Icon className="h-4 w-4 text-[var(--cg-text-muted)]" />
@@ -305,8 +339,8 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
         onEnrollNew={(serial) => { setIsModalOpen(false); onNavigateToEnroll(serial); }}
         isUnknown={isUnknownDevice}
         searchedTerm={searchedTerm}
-        isOwnerMismatch={isOwnerMismatch}
-        presentedStudent={presentedStudent}
+        isOwnerMismatch={false}
+        presentedStudent={null}
       />
     </div>
   );
