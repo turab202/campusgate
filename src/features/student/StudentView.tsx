@@ -13,6 +13,7 @@ import { QRPassModal } from '../../components/QRPassModal';
 import { listDevicesApi, reportLostApi, DeviceRead } from '../../services/deviceService';
 import { getDeviceMovementsApi, DeviceMovementRead } from '../../services/movementService';
 import { ApiError } from '../../services/api';
+import { createExitRequestApi, listExitRequestsApi, ExitRequestRead } from '../../services/exitRequestService';
 
 /** Map backend DeviceRead to the frontend Device shape used by QRPassModal. */
 function toFrontendDevice(d: DeviceRead): Device {
@@ -56,9 +57,11 @@ export const StudentView: React.FC = () => {
   const [movementsLoading, setMovementsLoading] = useState(false);
   const [movementsError, setMovementsError] = useState<string | null>(null);
 
-  const requests = campusStore.getRequests().filter(
-    (r) => r.applicantId === currentStudent.studentId
-  );
+  const [apiRequests, setApiRequests] = useState<ExitRequestRead[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
+
+  const requests = apiRequests;
 
   const loadDevices = useCallback(async () => {
     if (!authUser) return;
@@ -76,6 +79,23 @@ export const StudentView: React.FC = () => {
   }, [authUser]);
 
   useEffect(() => { loadDevices(); }, [loadDevices]);
+
+  const loadRequests = useCallback(async () => {
+    if (!authUser) return;
+    setRequestsLoading(true);
+    setRequestsError(null);
+    try {
+      const results = await listExitRequestsApi();
+      setApiRequests(results.filter((r) => r.applicant_id === authUser.id));
+    } catch (err) {
+      setApiRequests([]);
+      setRequestsError(err instanceof ApiError ? err.message : 'Failed to load exit requests.');
+    } finally {
+      setRequestsLoading(false);
+    }
+  }, [authUser]);
+
+  useEffect(() => { loadRequests(); }, [loadRequests]);
 
   const loadMovements = useCallback(async (deviceId: string) => {
     setMovementsLoading(true);
@@ -119,21 +139,24 @@ export const StudentView: React.FC = () => {
     }
   };
 
-  const handleCreateExitRequest = (e: React.FormEvent) => {
+  const handleCreateExitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reqDeviceDesc.trim()) return;
-    campusStore.createExitRequest({
-      deviceDescription: reqDeviceDesc,
-      applicantName: currentStudent.name,
-      applicantId: currentStudent.studentId,
-      department: currentStudent.department,
-      destination: reqDestination,
-      reason: reqReason,
-      expectedReturnDate: reqReturnDate
-    });
-    showToast('Temporary device exit request submitted to Security Office', 'success');
-    setShowExitModal(false);
-    setReqDeviceDesc('');
+    try {
+      await createExitRequestApi({
+        device_description: reqDeviceDesc.trim(),
+        destination: reqDestination.trim(),
+        reason: reqReason.trim(),
+        expected_return_date: reqReturnDate,
+      });
+      showToast('Temporary device exit request submitted to Security Office', 'success');
+      setShowExitModal(false);
+      setReqDeviceDesc('');
+      loadRequests();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to submit temporary exit request.';
+      showToast(message, 'error');
+    }
   };
 
   const statusStyle = (status: string) => {
@@ -410,7 +433,16 @@ export const StudentView: React.FC = () => {
           {/* REQUESTS TAB */}
           {activeTab === 'REQUESTS' && (
             <div className="space-y-4">
-              {requests.length === 0 ? (
+              {requestsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-[var(--cg-primary)]" />
+                </div>
+              ) : requestsError ? (
+                <div className="rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] p-4 text-sm text-[var(--cg-danger)]">
+                  {requestsError}
+                  <button onClick={loadRequests} className="ml-3 underline text-xs">Retry</button>
+                </div>
+              ) : requests.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--cg-border)] bg-[var(--cg-surface)] py-16 text-center">
                   <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--cg-surface-muted)]">
                     <FileText className="h-7 w-7 text-[var(--cg-text-subtle)]" />
@@ -423,25 +455,25 @@ export const StudentView: React.FC = () => {
                   {requests.map((req) => (
                     <div key={req.id} className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)] space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-bold text-[var(--cg-primary)]">{req.requestNumber}</span>
+                        <span className="font-mono text-xs font-bold text-[var(--cg-primary)]">{req.request_number}</span>
                         <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${req.status === 'APPROVED' ? 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]' : req.status === 'PENDING' ? 'bg-[var(--cg-warning-bg)] text-[var(--cg-warning)] border-[var(--cg-warning-border)]' : 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]'}`}>
                           {req.status}
                         </span>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-sm text-[var(--cg-text)]">{req.deviceDescription}</h3>
+                        <h3 className="font-semibold text-sm text-[var(--cg-text)]">{req.device_description}</h3>
                         <p className="mt-1 text-xs text-[var(--cg-text-muted)]">Destination: <strong className="text-[var(--cg-text)]">{req.destination}</strong></p>
                         <p className="text-xs text-[var(--cg-text-muted)]">{req.reason}</p>
                       </div>
                       <div className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2.5 text-xs space-y-1">
                         <div className="flex justify-between">
                           <span className="text-[var(--cg-text-muted)]">Expected Return:</span>
-                          <span className="font-semibold text-[var(--cg-text)]">{req.expectedReturnDate}</span>
+                          <span className="font-semibold text-[var(--cg-text)]">{req.expected_return_date}</span>
                         </div>
-                        {req.reviewedBy && (
+                        {req.reviewed_by && (
                           <div className="flex justify-between border-t border-[var(--cg-border)] pt-1">
                             <span className="text-[var(--cg-text-muted)]">Approved By:</span>
-                            <span className="font-semibold text-[var(--cg-success)]">{req.reviewedBy}</span>
+                            <span className="font-semibold text-[var(--cg-success)]">{req.reviewed_by}</span>
                           </div>
                         )}
                       </div>

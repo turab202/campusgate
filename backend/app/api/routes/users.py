@@ -27,11 +27,11 @@ def register_user(
     db: Annotated[Session, Depends(get_db)],
 ):
     email = str(body.email).strip().lower()
-    campus_id = body.campus_id
+    campus_id = body.campus_id.strip()
 
     if db.execute(select(User.id).where(func.lower(User.email) == email)).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
-    if db.execute(select(User.id).where(func.upper(User.campus_id) == campus_id)).first():
+    if db.execute(select(User.id).where(func.lower(User.campus_id) == campus_id.lower())).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Campus ID is already registered")
 
     try:
@@ -48,7 +48,7 @@ def register_user(
         db.rollback()
         if db.execute(select(User.id).where(func.lower(User.email) == email)).first():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
-        if db.execute(select(User.id).where(func.upper(User.campus_id) == campus_id)).first():
+        if db.execute(select(User.id).where(func.lower(User.campus_id) == campus_id.lower())).first():
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Campus ID is already registered")
         raise
 

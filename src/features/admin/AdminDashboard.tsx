@@ -15,6 +15,7 @@ import { listIncidentsApi, IncidentRead } from '../../services/incidentService';
 import { listVisitsApi, VisitRead } from '../../services/visitService';
 import { searchUsersApi, UserSearchResult } from '../../services/userService';
 import { ApiError } from '../../services/api';
+import { approveExitRequestApi, listExitRequestsApi, rejectExitRequestApi, ExitRequestRead } from '../../services/exitRequestService';
 
 export const AdminDashboard: React.FC = () => {
   const { t, language, showToast } = useApp();
@@ -100,6 +101,22 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => { if (activeTab === 'GATES' || activeTab === 'OVERVIEW') loadGates(); }, [activeTab, loadGates]);
   useEffect(() => { if (activeTab === 'AUDIT') loadAudit(); }, [activeTab, loadAudit]);
 
+  const loadRequests = useCallback(async () => {
+    setRequestsLoading(true);
+    setRequestsError(null);
+    try {
+      const results = await listExitRequestsApi();
+      setApiRequests(results);
+    } catch (err) {
+      setApiRequests([]);
+      setRequestsError(err instanceof ApiError ? err.message : 'Failed to load exit requests.');
+    } finally {
+      setRequestsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (activeTab === 'REQUESTS') loadRequests(); }, [activeTab, loadRequests]);
+
   const handleOfficerSearch = async (q: string) => {
     setOfficerSearch(q);
     if (q.length < 2) { setOfficerResults([]); return; }
@@ -109,8 +126,10 @@ export const AdminDashboard: React.FC = () => {
     } catch { setOfficerResults([]); }
   };
 
-  // Temporary exit requests have no corresponding backend read API yet.
-  const requests = campusStore.getRequests();
+  const [apiRequests, setApiRequests] = useState<ExitRequestRead[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
+  const requests = apiRequests;
   const mockGates = campusStore.getGates();
 
   const totalEnrolled = apiDevices.length;
@@ -146,14 +165,24 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleApproveRequest = (reqId: string) => {
-    campusStore.updateRequestStatus(reqId, 'APPROVED', 'Security Command Office');
-    showToast('Exit request approved.', 'success');
+  const handleApproveRequest = async (reqId: string) => {
+    try {
+      await approveExitRequestApi(reqId);
+      showToast('Exit request approved.', 'success');
+      loadRequests();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Failed to approve request.', 'error');
+    }
   };
 
-  const handleRejectRequest = (reqId: string) => {
-    campusStore.updateRequestStatus(reqId, 'REJECTED', 'Security Command Office', 'Insufficient verification.');
-    showToast('Exit request rejected.', 'warning');
+  const handleRejectRequest = async (reqId: string) => {
+    try {
+      await rejectExitRequestApi(reqId, { rejection_reason: 'Insufficient verification.' });
+      showToast('Exit request rejected.', 'warning');
+      loadRequests();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Failed to reject request.', 'error');
+    }
   };
 
   const handleCreateGate = async (e: React.FormEvent) => {
@@ -641,43 +670,54 @@ export const AdminDashboard: React.FC = () => {
             <h2 className="text-sm font-bold text-[var(--cg-text)]">Temporary Device Exit Authorizations</h2>
             <p className="mt-0.5 text-xs text-[var(--cg-text-muted)]">Security approvals for university lab hardware and exhibition devices.</p>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {requests.map((req) => {
-              const isPending = req.status === 'PENDING';
-              return (
-                <div key={req.id} className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-[var(--cg-primary)]">{req.requestNumber}</span>
-                    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${req.status === 'APPROVED' ? 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]' : isPending ? 'bg-[var(--cg-warning-bg)] text-[var(--cg-warning)] border-[var(--cg-warning-border)]' : 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]'}`}>
-                      {req.status}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm text-[var(--cg-text)]">{req.deviceDescription}</h3>
-                    <p className="mt-1 text-xs text-[var(--cg-text-muted)]">Applicant: <strong className="text-[var(--cg-text)]">{req.applicantName}</strong> · {req.applicantId} · {req.department}</p>
-                    <p className="text-xs text-[var(--cg-text-muted)]">Destination: <strong className="text-[var(--cg-text)]">{req.destination}</strong></p>
-                    <p className="mt-1 text-xs italic text-[var(--cg-text-muted)]">&ldquo;{req.reason}&rdquo;</p>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2.5 text-xs">
-                    <span className="text-[var(--cg-text-muted)]">Expected Return:</span>
-                    <span className="font-semibold text-[var(--cg-text)]">{req.expectedReturnDate}</span>
-                  </div>
-                  {isPending && (
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => handleRejectRequest(req.id)}
-                        className="flex items-center gap-1 rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--cg-danger)] hover:opacity-80 transition-opacity">
-                        Reject
-                      </button>
-                      <button onClick={() => handleApproveRequest(req.id)}
-                        className="flex items-center gap-1 rounded-xl bg-[var(--cg-primary)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
-                        Approve
-                      </button>
+          {requestsLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-[var(--cg-primary)]" />
+            </div>
+          ) : requestsError ? (
+            <div className="rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] p-4 text-sm text-[var(--cg-danger)]">
+              {requestsError}
+              <button onClick={loadRequests} className="ml-3 underline text-xs">Retry</button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {requests.map((req) => {
+                const isPending = req.status === 'PENDING';
+                return (
+                  <div key={req.id} className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-[var(--cg-primary)]">{req.request_number}</span>
+                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${req.status === 'APPROVED' ? 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]' : isPending ? 'bg-[var(--cg-warning-bg)] text-[var(--cg-warning)] border-[var(--cg-warning-border)]' : 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]'}`}>
+                        {req.status}
+                      </span>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    <div>
+                      <h3 className="font-semibold text-sm text-[var(--cg-text)]">{req.device_description}</h3>
+                      <p className="mt-1 text-xs text-[var(--cg-text-muted)]">Applicant: <strong className="text-[var(--cg-text)]">{req.applicant_name}</strong> · {req.applicant_id} · {req.department ?? '—'}</p>
+                      <p className="text-xs text-[var(--cg-text-muted)]">Destination: <strong className="text-[var(--cg-text)]">{req.destination}</strong></p>
+                      <p className="mt-1 text-xs italic text-[var(--cg-text-muted)]">&ldquo;{req.reason}&rdquo;</p>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2.5 text-xs">
+                      <span className="text-[var(--cg-text-muted)]">Expected Return:</span>
+                      <span className="font-semibold text-[var(--cg-text)]">{req.expected_return_date}</span>
+                    </div>
+                    {isPending && (
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => handleRejectRequest(req.id)}
+                          className="flex items-center gap-1 rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--cg-danger)] hover:opacity-80 transition-opacity">
+                          Reject
+                        </button>
+                        <button onClick={() => handleApproveRequest(req.id)}
+                          className="flex items-center gap-1 rounded-xl bg-[var(--cg-primary)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
+                          Approve
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

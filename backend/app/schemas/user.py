@@ -43,7 +43,7 @@ class UserRegistrationRequest(BaseModel):
     @field_validator("campus_id")
     @classmethod
     def normalize_campus_id(cls, value: str) -> str:
-        return value.upper()
+        return value.strip()
 
     @field_validator("phone")
     @classmethod
