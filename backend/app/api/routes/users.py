@@ -5,17 +5,52 @@ GATE_OFFICER and ADMIN only. Returns safe public fields — never password_hash.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_
+from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.user import User
+from app.schemas.user import UserCreate, UserRegistrationRead, UserRegistrationRequest
+from app.services.user_service import create_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 _SEARCH_LIMIT = 20
+
+
+@router.post("", response_model=UserRegistrationRead, status_code=status.HTTP_201_CREATED)
+def register_user(
+    body: UserRegistrationRequest,
+    db: Annotated[Session, Depends(get_db)],
+):
+    email = str(body.email).strip().lower()
+    campus_id = body.campus_id
+
+    if db.execute(select(User.id).where(func.lower(User.email) == email)).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
+    if db.execute(select(User.id).where(func.upper(User.campus_id) == campus_id)).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Campus ID is already registered")
+
+    try:
+        return create_user(db, UserCreate(
+            full_name=body.full_name,
+            email=email,
+            phone=body.phone,
+            department=body.department,
+            password_hash=body.password,
+            role=body.role,
+            campus_id=campus_id,
+        ))
+    except IntegrityError:
+        db.rollback()
+        if db.execute(select(User.id).where(func.lower(User.email) == email)).first():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
+        if db.execute(select(User.id).where(func.upper(User.campus_id) == campus_id)).first():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Campus ID is already registered")
+        raise
 
 
 def _require_officer_or_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
