@@ -1,7 +1,6 @@
 import {
   AuditLog,
   Device,
-  ExitRequest,
   Gate,
   GateOfficer,
   GateShift,
@@ -13,7 +12,6 @@ import {
 import {
   initialAuditLogs,
   initialDevices,
-  initialExitRequests,
   initialGates,
   initialIncidents,
   initialMovements,
@@ -32,7 +30,6 @@ const STORAGE_KEYS = {
   STUDENTS: 'campusgate_students_v3',
   VISITORS: 'campusgate_visitors_v3',
   INCIDENTS: 'campusgate_incidents_v3',
-  REQUESTS: 'campusgate_requests_v3',
   AUDIT: 'campusgate_audit_v3'
 };
 
@@ -79,7 +76,6 @@ class CampusGateStore {
   private students: Student[] = loadFromStorage(STORAGE_KEYS.STUDENTS, initialStudents);
   private visitors: VisitorPass[] = loadFromStorage(STORAGE_KEYS.VISITORS, initialVisitors);
   private incidents: SecurityIncident[] = loadFromStorage(STORAGE_KEYS.INCIDENTS, initialIncidents);
-  private requests: ExitRequest[] = loadFromStorage(STORAGE_KEYS.REQUESTS, initialExitRequests);
   private auditLogs: AuditLog[] = loadFromStorage(STORAGE_KEYS.AUDIT, initialAuditLogs);
 
   // Listeners for reactive updates
@@ -103,7 +99,6 @@ class CampusGateStore {
     this.students = [...initialStudents];
     this.visitors = [...initialVisitors];
     this.incidents = [...initialIncidents];
-    this.requests = [...initialExitRequests];
     this.auditLogs = [...initialAuditLogs];
 
     const storage = getStorage();
@@ -699,53 +694,6 @@ class CampusGateStore {
     inc.status = status;
     if (notes) inc.resolutionNotes = notes;
     saveToStorage(STORAGE_KEYS.INCIDENTS, this.incidents);
-    this.notify();
-  }
-
-  // --- Exit Requests ---
-  public getRequests(): ExitRequest[] {
-    return [...this.requests];
-  }
-
-  public createExitRequest(params: Omit<ExitRequest, 'id' | 'requestNumber' | 'status' | 'submittedDate'>): ExitRequest {
-    const reqNum = `EXT-2026-00${this.requests.length + 50}`;
-    const newReq: ExitRequest = {
-      ...params,
-      id: `ext-${Date.now()}`,
-      requestNumber: reqNum,
-      status: 'PENDING',
-      submittedDate: `Today, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-    };
-
-    this.requests.unshift(newReq);
-    saveToStorage(STORAGE_KEYS.REQUESTS, this.requests);
-    this.notify();
-    return newReq;
-  }
-
-  public updateRequestStatus(id: string, status: ExitRequest['status'], reviewer: string, rejectionReason?: string): void {
-    const req = this.requests.find((r) => r.id === id);
-    if (!req) return;
-
-    req.status = status;
-    req.reviewedBy = reviewer;
-    req.reviewedDate = `Today, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    if (rejectionReason) req.rejectionReason = rejectionReason;
-
-    saveToStorage(STORAGE_KEYS.REQUESTS, this.requests);
-
-    this.addAuditLog({
-      actorBadgeOrEmail: reviewer,
-      actorRole: 'ADMIN',
-      action: 'EXIT_REQUEST_APPROVED',
-      resourceType: 'REQUEST',
-      resourceId: `${req.requestNumber} (${req.deviceDescription})`,
-      gateId: 'ADMIN-SECURITY-OFFICE',
-      gateName: 'Campus Security HQ',
-      details: `Exit request ${req.requestNumber} updated to ${status} for ${req.applicantName}.`,
-      result: status === 'APPROVED' ? 'SUCCESS' : 'WARNING'
-    });
-
     this.notify();
   }
 

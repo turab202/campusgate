@@ -30,13 +30,3 @@ class User(Base):
     movements_processed: Mapped[list["DeviceMovement"]] = relationship("DeviceMovement", back_populates="officer")
     incidents_reported: Mapped[list["Incident"]] = relationship("Incident", back_populates="reporter")
     audit_logs: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="actor")
-    temporary_exit_requests: Mapped[list["TemporaryExitRequest"]] = relationship(
-        "TemporaryExitRequest",
-        back_populates="applicant",
-        foreign_keys="TemporaryExitRequest.applicant_id",
-    )
-    temporary_exit_requests_reviewed: Mapped[list["TemporaryExitRequest"]] = relationship(
-        "TemporaryExitRequest",
-        back_populates="reviewer",
-        foreign_keys="TemporaryExitRequest.reviewed_by_id",
-    )

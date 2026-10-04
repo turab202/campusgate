@@ -60,9 +60,3 @@ class VisitStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
-class TemporaryExitRequestStatus(str, enum.Enum):
-    PENDING = "PENDING"
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-    EXPIRED = "EXPIRED"
-    COMPLETED = "COMPLETED"

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield, Download, Search, ArrowDownLeft, ArrowUpRight,
-  Activity, Database, GitBranch, FileCheck, ScrollText,
+  Activity, Database, GitBranch, ScrollText,
   TrendingUp, AlertTriangle, Users, Zap, Loader2, RefreshCw, Plus
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -15,11 +15,10 @@ import { listIncidentsApi, IncidentRead } from '../../services/incidentService';
 import { listVisitsApi, VisitRead } from '../../services/visitService';
 import { searchUsersApi, UserSearchResult } from '../../services/userService';
 import { ApiError } from '../../services/api';
-import { approveExitRequestApi, listExitRequestsApi, rejectExitRequestApi, ExitRequestRead } from '../../services/exitRequestService';
 
 export const AdminDashboard: React.FC = () => {
   const { t, language, showToast } = useApp();
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DEVICES' | 'GATES' | 'REQUESTS' | 'AUDIT'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DEVICES' | 'GATES' | 'AUDIT'>('OVERVIEW');
   const [deviceSearch, setDeviceSearch] = useState('');
   const [deviceStatusFilter, setDeviceStatusFilter] = useState('ALL');
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<string | null>(null);
@@ -101,22 +100,6 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => { if (activeTab === 'GATES' || activeTab === 'OVERVIEW') loadGates(); }, [activeTab, loadGates]);
   useEffect(() => { if (activeTab === 'AUDIT') loadAudit(); }, [activeTab, loadAudit]);
 
-  const loadRequests = useCallback(async () => {
-    setRequestsLoading(true);
-    setRequestsError(null);
-    try {
-      const results = await listExitRequestsApi();
-      setApiRequests(results);
-    } catch (err) {
-      setApiRequests([]);
-      setRequestsError(err instanceof ApiError ? err.message : 'Failed to load exit requests.');
-    } finally {
-      setRequestsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { if (activeTab === 'REQUESTS') loadRequests(); }, [activeTab, loadRequests]);
-
   const handleOfficerSearch = async (q: string) => {
     setOfficerSearch(q);
     if (q.length < 2) { setOfficerResults([]); return; }
@@ -126,10 +109,6 @@ export const AdminDashboard: React.FC = () => {
     } catch { setOfficerResults([]); }
   };
 
-  const [apiRequests, setApiRequests] = useState<ExitRequestRead[]>([]);
-  const [requestsLoading, setRequestsLoading] = useState(false);
-  const [requestsError, setRequestsError] = useState<string | null>(null);
-  const requests = apiRequests;
   const mockGates = campusStore.getGates();
 
   const totalEnrolled = apiDevices.length;
@@ -162,26 +141,6 @@ export const AdminDashboard: React.FC = () => {
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Recovery failed.';
       showToast(message, 'error');
-    }
-  };
-
-  const handleApproveRequest = async (reqId: string) => {
-    try {
-      await approveExitRequestApi(reqId);
-      showToast('Exit request approved.', 'success');
-      loadRequests();
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Failed to approve request.', 'error');
-    }
-  };
-
-  const handleRejectRequest = async (reqId: string) => {
-    try {
-      await rejectExitRequestApi(reqId, { rejection_reason: 'Insufficient verification.' });
-      showToast('Exit request rejected.', 'warning');
-      loadRequests();
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Failed to reject request.', 'error');
     }
   };
 
@@ -231,7 +190,6 @@ export const AdminDashboard: React.FC = () => {
     { id: 'OVERVIEW' as const, label: 'Gate Telemetry', icon: Activity },
     { id: 'DEVICES' as const, label: 'Device Registry', icon: Database },
     { id: 'GATES' as const, label: t('navGates'), icon: GitBranch },
-    { id: 'REQUESTS' as const, label: 'Exit Requests', icon: FileCheck },
     { id: 'AUDIT' as const, label: 'Audit Logs', icon: ScrollText },
   ];
 
@@ -660,64 +618,6 @@ export const AdminDashboard: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* REQUESTS TAB */}
-      {activeTab === 'REQUESTS' && (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)]">
-            <h2 className="text-sm font-bold text-[var(--cg-text)]">Temporary Device Exit Authorizations</h2>
-            <p className="mt-0.5 text-xs text-[var(--cg-text-muted)]">Security approvals for university lab hardware and exhibition devices.</p>
-          </div>
-          {requestsLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-5 w-5 animate-spin text-[var(--cg-primary)]" />
-            </div>
-          ) : requestsError ? (
-            <div className="rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] p-4 text-sm text-[var(--cg-danger)]">
-              {requestsError}
-              <button onClick={loadRequests} className="ml-3 underline text-xs">Retry</button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {requests.map((req) => {
-                const isPending = req.status === 'PENDING';
-                return (
-                  <div key={req.id} className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-[var(--cg-primary)]">{req.request_number}</span>
-                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${req.status === 'APPROVED' ? 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]' : isPending ? 'bg-[var(--cg-warning-bg)] text-[var(--cg-warning)] border-[var(--cg-warning-border)]' : 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]'}`}>
-                        {req.status}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-sm text-[var(--cg-text)]">{req.device_description}</h3>
-                      <p className="mt-1 text-xs text-[var(--cg-text-muted)]">Applicant: <strong className="text-[var(--cg-text)]">{req.applicant_name}</strong> · {req.applicant_id} · {req.department ?? '—'}</p>
-                      <p className="text-xs text-[var(--cg-text-muted)]">Destination: <strong className="text-[var(--cg-text)]">{req.destination}</strong></p>
-                      <p className="mt-1 text-xs italic text-[var(--cg-text-muted)]">&ldquo;{req.reason}&rdquo;</p>
-                    </div>
-                    <div className="flex items-center justify-between rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2.5 text-xs">
-                      <span className="text-[var(--cg-text-muted)]">Expected Return:</span>
-                      <span className="font-semibold text-[var(--cg-text)]">{req.expected_return_date}</span>
-                    </div>
-                    {isPending && (
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleRejectRequest(req.id)}
-                          className="flex items-center gap-1 rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--cg-danger)] hover:opacity-80 transition-opacity">
-                          Reject
-                        </button>
-                        <button onClick={() => handleApproveRequest(req.id)}
-                          className="flex items-center gap-1 rounded-xl bg-[var(--cg-primary)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
-                          Approve
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 

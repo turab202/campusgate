@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Laptop, QrCode, AlertTriangle, Plus,
   ArrowUpRight, ArrowDownLeft, MapPin, X,
-  Package, Clock, FileText, TrendingUp, Shield,
+  Package, Clock, TrendingUp, Shield,
   Loader2, GraduationCap
 } from 'lucide-react';
 import { Device } from '../../types';
@@ -13,7 +13,6 @@ import { QRPassModal } from '../../components/QRPassModal';
 import { listDevicesApi, reportLostApi, DeviceRead } from '../../services/deviceService';
 import { getDeviceMovementsApi, DeviceMovementRead } from '../../services/movementService';
 import { ApiError } from '../../services/api';
-import { createExitRequestApi, listExitRequestsApi, ExitRequestRead } from '../../services/exitRequestService';
 
 /** Map backend DeviceRead to the frontend Device shape used by QRPassModal. */
 function toFrontendDevice(d: DeviceRead): Device {
@@ -38,14 +37,9 @@ function toFrontendDevice(d: DeviceRead): Device {
 
 export const StudentView: React.FC = () => {
   const { t, language, currentStudent, authUser, showToast } = useApp();
-  const [activeTab, setActiveTab] = useState<'DEVICES' | 'HISTORY' | 'REQUESTS'>('DEVICES');
+  const [activeTab, setActiveTab] = useState<'DEVICES' | 'HISTORY'>('DEVICES');
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<Device | null>(null);
   const [deviceToReportLost, setDeviceToReportLost] = useState<Device | null>(null);
-  const [showExitModal, setShowExitModal] = useState(false);
-  const [reqDeviceDesc, setReqDeviceDesc] = useState('');
-  const [reqDestination, setReqDestination] = useState('INSA Cyber Center, Addis Ababa');
-  const [reqReason, setReqReason] = useState('Research Project Exhibition & Capstone Defense');
-  const [reqReturnDate, setReqReturnDate] = useState('2026-09-30');
 
   // Real API state
   const [apiDevices, setApiDevices] = useState<DeviceRead[]>([]);
@@ -56,12 +50,6 @@ export const StudentView: React.FC = () => {
   const [apiMovements, setApiMovements] = useState<DeviceMovementRead[]>([]);
   const [movementsLoading, setMovementsLoading] = useState(false);
   const [movementsError, setMovementsError] = useState<string | null>(null);
-
-  const [apiRequests, setApiRequests] = useState<ExitRequestRead[]>([]);
-  const [requestsLoading, setRequestsLoading] = useState(false);
-  const [requestsError, setRequestsError] = useState<string | null>(null);
-
-  const requests = apiRequests;
 
   const loadDevices = useCallback(async () => {
     if (!authUser) return;
@@ -79,23 +67,6 @@ export const StudentView: React.FC = () => {
   }, [authUser]);
 
   useEffect(() => { loadDevices(); }, [loadDevices]);
-
-  const loadRequests = useCallback(async () => {
-    if (!authUser) return;
-    setRequestsLoading(true);
-    setRequestsError(null);
-    try {
-      const results = await listExitRequestsApi();
-      setApiRequests(results.filter((r) => r.applicant_id === authUser.id));
-    } catch (err) {
-      setApiRequests([]);
-      setRequestsError(err instanceof ApiError ? err.message : 'Failed to load exit requests.');
-    } finally {
-      setRequestsLoading(false);
-    }
-  }, [authUser]);
-
-  useEffect(() => { loadRequests(); }, [loadRequests]);
 
   const loadMovements = useCallback(async (deviceId: string) => {
     setMovementsLoading(true);
@@ -139,26 +110,6 @@ export const StudentView: React.FC = () => {
     }
   };
 
-  const handleCreateExitRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reqDeviceDesc.trim()) return;
-    try {
-      await createExitRequestApi({
-        device_description: reqDeviceDesc.trim(),
-        destination: reqDestination.trim(),
-        reason: reqReason.trim(),
-        expected_return_date: reqReturnDate,
-      });
-      showToast('Temporary device exit request submitted to Security Office', 'success');
-      setShowExitModal(false);
-      setReqDeviceDesc('');
-      loadRequests();
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Failed to submit temporary exit request.';
-      showToast(message, 'error');
-    }
-  };
-
   const statusStyle = (status: string) => {
     if (status === 'INSIDE_CAMPUS') return { badge: 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]', dot: 'bg-[var(--cg-success)]' };
     if (status === 'LOST') return { badge: 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]', dot: 'bg-[var(--cg-danger)]' };
@@ -168,7 +119,6 @@ export const StudentView: React.FC = () => {
   const navItems = [
     { id: 'DEVICES' as const, label: t('navMyDevices'), icon: Package, count: devices.length, desc: 'Enrolled devices' },
     { id: 'HISTORY' as const, label: t('navHistory'), icon: Clock, count: apiMovements.length, desc: 'Movement timeline' },
-    { id: 'REQUESTS' as const, label: t('navRequests'), icon: FileText, count: requests.length, desc: 'Exit authorizations' },
   ];
 
   return (
@@ -293,14 +243,6 @@ export const StudentView: React.FC = () => {
               </p>
             </div>
           </div>
-          {activeTab === 'REQUESTS' && (
-            <button
-              onClick={() => setShowExitModal(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-[var(--cg-primary)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" /> Submit Request
-            </button>
-          )}
         </div>
 
         {/* Scrollable content */}
@@ -430,60 +372,6 @@ export const StudentView: React.FC = () => {
             </div>
           )}
 
-          {/* REQUESTS TAB */}
-          {activeTab === 'REQUESTS' && (
-            <div className="space-y-4">
-              {requestsLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-6 w-6 animate-spin text-[var(--cg-primary)]" />
-                </div>
-              ) : requestsError ? (
-                <div className="rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] p-4 text-sm text-[var(--cg-danger)]">
-                  {requestsError}
-                  <button onClick={loadRequests} className="ml-3 underline text-xs">Retry</button>
-                </div>
-              ) : requests.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--cg-border)] bg-[var(--cg-surface)] py-16 text-center">
-                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--cg-surface-muted)]">
-                    <FileText className="h-7 w-7 text-[var(--cg-text-subtle)]" />
-                  </div>
-                  <p className="text-sm font-semibold text-[var(--cg-text)]">No exit requests yet</p>
-                  <p className="mt-1 text-xs text-[var(--cg-text-muted)]">For university-owned lab equipment requiring off-campus authorization.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  {requests.map((req) => (
-                    <div key={req.id} className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)] space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-bold text-[var(--cg-primary)]">{req.request_number}</span>
-                        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${req.status === 'APPROVED' ? 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]' : req.status === 'PENDING' ? 'bg-[var(--cg-warning-bg)] text-[var(--cg-warning)] border-[var(--cg-warning-border)]' : 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]'}`}>
-                          {req.status}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-sm text-[var(--cg-text)]">{req.device_description}</h3>
-                        <p className="mt-1 text-xs text-[var(--cg-text-muted)]">Destination: <strong className="text-[var(--cg-text)]">{req.destination}</strong></p>
-                        <p className="text-xs text-[var(--cg-text-muted)]">{req.reason}</p>
-                      </div>
-                      <div className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2.5 text-xs space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-[var(--cg-text-muted)]">Expected Return:</span>
-                          <span className="font-semibold text-[var(--cg-text)]">{req.expected_return_date}</span>
-                        </div>
-                        {req.reviewed_by && (
-                          <div className="flex justify-between border-t border-[var(--cg-border)] pt-1">
-                            <span className="text-[var(--cg-text-muted)]">Approved By:</span>
-                            <span className="font-semibold text-[var(--cg-success)]">{req.reviewed_by}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
         </div>
       </div>
 
@@ -505,44 +393,6 @@ export const StudentView: React.FC = () => {
               <button onClick={() => setDeviceToReportLost(null)} className="rounded-xl px-4 py-2 text-sm font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">{t('cancel')}</button>
               <button onClick={handleConfirmLost} className="rounded-xl bg-[var(--cg-danger)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity">{t('confirmReportLostAction')}</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Exit request modal */}
-      {showExitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-modal)] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-[var(--cg-border)] px-5 py-4" style={{ background: 'linear-gradient(135deg, #1E3A5F, #2D5282)' }}>
-              <h3 className="font-bold text-white">Submit Temporary Exit Authorization</h3>
-              <button onClick={() => setShowExitModal(false)} aria-label="Close" className="text-white/70 hover:text-white transition-colors"><X className="h-5 w-5" /></button>
-            </div>
-            <form onSubmit={handleCreateExitRequest} className="p-5 space-y-4 text-xs">
-              {[
-                { label: 'Equipment / Device Name & Model *', value: reqDeviceDesc, onChange: setReqDeviceDesc, placeholder: 'e.g. Epson EB-2250U 3LCD Projector', required: true },
-                { label: 'Destination *', value: reqDestination, onChange: setReqDestination, placeholder: '', required: true },
-              ].map(({ label, value, onChange, placeholder, required }) => (
-                <div key={label} className="space-y-1.5">
-                  <label className="block font-semibold text-[var(--cg-text)]">{label}</label>
-                  <input required={required} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-                    className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)] transition-colors" />
-                </div>
-              ))}
-              <div className="space-y-1.5">
-                <label className="block font-semibold text-[var(--cg-text)]">Academic / Research Justification *</label>
-                <textarea required rows={2} value={reqReason} onChange={(e) => setReqReason(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)] transition-colors" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block font-semibold text-[var(--cg-text)]">Expected Return Date *</label>
-                <input required type="date" value={reqReturnDate} onChange={(e) => setReqReturnDate(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)] transition-colors" />
-              </div>
-              <div className="flex items-center justify-end gap-2 border-t border-[var(--cg-border)] pt-3">
-                <button type="button" onClick={() => setShowExitModal(false)} className="rounded-xl px-4 py-2 text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">{t('cancel')}</button>
-                <button type="submit" className="rounded-xl bg-[var(--cg-primary)] px-5 py-2.5 font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">Submit to Security HQ</button>
-              </div>
-            </form>
           </div>
         </div>
       )}

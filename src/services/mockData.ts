@@ -622,40 +622,6 @@ export const initialIncidents: SecurityIncident[] = [
   }
 ];
 
-export const initialExitRequests: ExitRequest[] = [
-  {
-    id: 'ext-1',
-    requestNumber: 'EXT-2026-0042',
-    deviceId: 'dev-6',
-    deviceDescription: 'Epson PowerLite EB-2250U 3LCD Projector',
-    serialNumber: 'EP-88210-LAB',
-    applicantName: 'Sara Ali',
-    applicantId: 'ASTU-2024-05510',
-    department: 'Architecture & Planning',
-    destination: 'INSA (Information Network Security Administration) HQ, Addis Ababa',
-    reason: 'Graduation Exhibition & Collaborative Smart Campus Defense Presentation',
-    expectedReturnDate: '2026-09-29',
-    status: 'APPROVED',
-    submittedDate: '2026-09-24',
-    reviewedBy: 'Col. Kassahun (Chief of Security)',
-    reviewedDate: '2026-09-25'
-  },
-  {
-    id: 'ext-2',
-    requestNumber: 'EXT-2026-0045',
-    deviceDescription: 'Dual Spectrum Digital Oscilloscope Tektronix TBS1052B',
-    serialNumber: 'C019842-TEK',
-    applicantName: 'Abebe Kebede',
-    applicantId: 'ASTU-2023-04812',
-    department: 'Electrical & Computer Engineering',
-    destination: 'Ethiopian Electric Power Substation Lab',
-    reason: 'Field Sensor Calibration for Capstone Thesis',
-    expectedReturnDate: '2026-10-02',
-    status: 'PENDING',
-    submittedDate: 'Today, 08:30 AM'
-  }
-];
-
 export const initialAuditLogs: AuditLog[] = [
   {
     id: 'aud-1',

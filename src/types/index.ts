@@ -144,25 +144,6 @@ export interface VisitorPass {
   qrPayload: string;
 }
 
-export interface ExitRequest {
-  id: string;
-  requestNumber: string;  // e.g. EXT-2026-0042
-  deviceId?: string;
-  deviceDescription: string;
-  serialNumber?: string;
-  applicantName: string;
-  applicantId: string;
-  department: string;
-  destination: string;    // e.g. INSA / Tech Expo / Off-campus Lab
-  reason: string;
-  expectedReturnDate: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'COMPLETED';
-  submittedDate: string;
-  reviewedBy?: string;
-  reviewedDate?: string;
-  rejectionReason?: string;
-}
-
 export interface SecurityIncident {
   id: string;
   incidentNumber: string; // e.g. INC-2026-019
@@ -187,8 +168,8 @@ export interface AuditLog {
   timestamp: string;
   actorBadgeOrEmail: string;
   actorRole: UserRole;
-  action: 'DEVICE_ENROLLED' | 'CHECK_IN' | 'CHECK_OUT' | 'LOST_REPORTED' | 'INCIDENT_CREATED' | 'VISITOR_CHECK_IN' | 'VISITOR_CHECK_OUT' | 'EXIT_REQUEST_APPROVED' | 'SHIFT_ASSIGNED';
-  resourceType: 'DEVICE' | 'GATE' | 'VISITOR' | 'INCIDENT' | 'REQUEST' | 'SHIFT';
+  action: 'DEVICE_ENROLLED' | 'CHECK_IN' | 'CHECK_OUT' | 'LOST_REPORTED' | 'INCIDENT_CREATED' | 'VISITOR_CHECK_IN' | 'VISITOR_CHECK_OUT' | 'SHIFT_ASSIGNED';
+  resourceType: 'DEVICE' | 'GATE' | 'VISITOR' | 'INCIDENT' | 'SHIFT';
   resourceId: string;
   gateId: string;
   gateName: string;

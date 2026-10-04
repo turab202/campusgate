@@ -9,7 +9,6 @@ from app.api.routes import (
     incidents,
     lost_device,
     movements,
-    temporary_exit_requests,
     users,
     visits,
 )
@@ -21,7 +20,6 @@ api_router.include_router(users.router)
 api_router.include_router(devices.router)
 api_router.include_router(lost_device.router)
 api_router.include_router(movements.router)
-api_router.include_router(temporary_exit_requests.router)
 api_router.include_router(incidents.router)
 api_router.include_router(visits.router)
 api_router.include_router(gates.router)

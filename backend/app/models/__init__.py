@@ -5,7 +5,6 @@ from app.models.enums import (
     IncidentStatus,
     IncidentType,
     MovementType,
-    TemporaryExitRequestStatus,
     UserRole,
     VisitStatus,
 )
@@ -18,11 +17,10 @@ from app.models.incident import Incident
 from app.models.audit_log import AuditLog
 from app.models.visitor import Visitor
 from app.models.visit import Visit
-from app.models.temporary_exit_request import TemporaryExitRequest
 
 __all__ = [
     "UserRole", "DeviceType", "DeviceStatus", "MovementType", "IncidentType", "IncidentStatus",
-    "IdentificationType", "VisitStatus", "TemporaryExitRequestStatus",
+    "IdentificationType", "VisitStatus",
     "User", "Gate", "GateAssignment", "Device", "DeviceMovement", "Incident", "AuditLog",
-    "Visitor", "Visit", "TemporaryExitRequest",
+    "Visitor", "Visit",
 ]

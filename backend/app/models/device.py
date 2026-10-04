@@ -29,8 +29,3 @@ class Device(Base):
     owner: Mapped["User"] = relationship("User", back_populates="devices", foreign_keys=[owner_id])
     movements: Mapped[list["DeviceMovement"]] = relationship("DeviceMovement", back_populates="device")
     incidents: Mapped[list["Incident"]] = relationship("Incident", back_populates="device")
-    temporary_exit_requests: Mapped[list["TemporaryExitRequest"]] = relationship(
-        "TemporaryExitRequest",
-        back_populates="device",
-        foreign_keys="TemporaryExitRequest.device_id",
-    )
