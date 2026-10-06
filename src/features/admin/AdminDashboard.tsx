@@ -203,69 +203,85 @@ export const AdminDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
-      {/* Admin header */}
-      <div className="overflow-hidden rounded-2xl border border-[var(--cg-border)] shadow-[var(--cg-shadow-sm)]" style={{ background: 'linear-gradient(135deg, #0F2340 0%, #1E3A5F 50%, #2D5282 100%)' }}>
-        <div className="px-6 py-5">
-          {/* Title row */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 border border-white/20">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-bold text-white">{t('adminDashboardTitle')}</h1>
-                  <span className="rounded-full bg-white/15 border border-white/20 px-2.5 py-0.5 text-[10px] font-bold text-white/80">SYSTEM LEVEL</span>
-                </div>
-                <p className="mt-0.5 text-xs text-white/50">Centralized telemetry across all university gates · Adama Science & Technology University</p>
-              </div>
+    <div className="mx-auto max-w-7xl">
+      <div className="flex flex-col gap-4 xl:flex-row">
+        <aside className="w-full shrink-0 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-3.5 shadow-[var(--cg-shadow-sm)] xl:w-72">
+          <div className="flex items-center gap-3 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--cg-primary)]/10 text-[var(--cg-primary)]">
+              <Shield className="h-5 w-5" />
             </div>
-            <button
-              onClick={() => showToast('Report export queued.', 'info')}
-              className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors"
-            >
-              <Download className="h-3.5 w-3.5" />
-              {t('exportPdf')}
-            </button>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">System</p>
+              <p className="text-sm font-bold text-[var(--cg-text)]">{t('adminDashboardTitle')}</p>
+            </div>
           </div>
 
-          {/* Stat cards */}
-          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/15 pt-5 sm:grid-cols-3 lg:grid-cols-6">
-            {statCards.map(({ label, value, sub, color, icon: Icon, iconBg }) => (
-              <div key={label} className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconBg}`}>
-                  <Icon className={`h-4 w-4 ${color}`} />
-                </div>
-                <div>
-                  <span className={`block font-mono text-2xl font-bold ${color}`}>{value}</span>
-                  <span className="block text-[10px] font-semibold text-white/60 leading-tight mt-0.5">{label}</span>
-                  <span className="block text-[10px] text-white/35">{sub}</span>
-                </div>
-              </div>
+          <div className="mt-4 space-y-2">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all ${
+                  activeTab === id ? 'bg-[var(--cg-primary)] text-white shadow-[var(--cg-shadow-xs)]' : 'bg-[var(--cg-surface-muted)] text-[var(--cg-text-muted)] hover:text-[var(--cg-text)]'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
             ))}
           </div>
-        </div>
 
-        {/* Tab nav */}
-        <div className="flex items-center gap-1 overflow-x-auto border-t border-white/15 bg-white/5 px-4 py-2">
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
-                activeTab === id ? 'bg-white text-[var(--cg-primary)] shadow-[var(--cg-shadow-xs)]' : 'text-white/60 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+          <div className="mt-4 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">Quick status</p>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[var(--cg-text-muted)]">Inside</span>
+                <span className="font-mono font-bold text-[var(--cg-success)]">{currentlyInside}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[var(--cg-text-muted)]">Outside</span>
+                <span className="font-mono font-bold text-[var(--cg-info)]">{currentlyOutside}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[var(--cg-text-muted)]">Alerts</span>
+                <span className="font-mono font-bold text-[var(--cg-danger)]">{currentlyLost}</span>
+              </div>
+            </div>
+          </div>
+        </aside>
 
-      {/* OVERVIEW TAB */}
-      {activeTab === 'OVERVIEW' && (
+        <div className="flex-1 space-y-5">
+          <header className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] px-4 py-3 shadow-[var(--cg-shadow-sm)]">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">Campus operations</p>
+                <h1 className="mt-1 text-lg font-bold text-[var(--cg-text)]">{t('adminDashboardTitle')}</h1>
+              </div>
+              <button
+                onClick={() => showToast('Report export queued.', 'info')}
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-xs font-semibold text-[var(--cg-text)] transition-colors hover:bg-[var(--cg-border)]"
+              >
+                <Download className="h-3.5 w-3.5" />
+                {t('exportPdf')}
+              </button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+              {statCards.map(({ label, value, sub, color, icon: Icon, iconBg }) => (
+                <div key={label} className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2.5">
+                  <div className={`mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${iconBg}`}>
+                    <Icon className={`h-3.5 w-3.5 ${color}`} />
+                  </div>
+                  <div className={`font-mono text-lg font-bold ${color}`}>{value}</div>
+                  <div className="mt-0.5 text-[9px] font-semibold text-[var(--cg-text-muted)]">{label}</div>
+                  <div className="text-[9px] text-[var(--cg-text-subtle)]">{sub}</div>
+                </div>
+              ))}
+            </div>
+          </header>
+
+          {/* OVERVIEW TAB */}
+          {activeTab === 'OVERVIEW' && (
         <div className="space-y-5">
           {dashboardError && (
             <div className="rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] p-4 text-sm text-[var(--cg-danger)]">
@@ -675,7 +691,8 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
-
+        </div>
+      </div>
     </div>
   );
 };

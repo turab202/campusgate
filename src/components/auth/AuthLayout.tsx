@@ -86,7 +86,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             {/* Bottom badge */}
             <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
               <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-white/60">3 gates online · Adama Science & Technology University</span>
+              <span className="text-xs text-white/60">3 gates online · CampusGate</span>
             </div>
           </div>
         </div>
