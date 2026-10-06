@@ -1,4 +1,4 @@
-import { Device, Gate, GateOfficer, GateShift, MovementTransaction, SecurityIncident, Student, VisitorPass, ExitRequest, AuditLog } from '../types';
+import { Device, Gate, GateOfficer, GateShift, MovementTransaction, SecurityIncident, Student, VisitorPass, AuditLog } from '../types';
 
 export const initialStudents: Student[] = [
   {
