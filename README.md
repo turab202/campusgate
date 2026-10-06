@@ -1,336 +1,286 @@
 # CampusGate
 
-**University Access, Asset & Security Management Platform**
+CampusGate is a university gate and device security platform that replaces the manual gate-book process with a digital, auditable workflow.
 
-CampusGate is a centralized university security and access management platform designed to digitize campus gate operations, device registration, movement tracking, visitor management, and security incidents.
+The current implementation is a real full-stack application with:
 
-It replaces fragmented manual records with a shared system that allows authorized gate officers and administrators to securely verify people and devices across all campus gates.
+- a Next.js + React frontend
+- a FastAPI + SQLAlchemy backend
+- PostgreSQL persistence with Alembic migrations
+- role-based access control for students, gate officers, and administrators
 
-## The Problem
+This repository is not a mock demo-only project. It uses the actual backend APIs and database models for device movement, gate assignment, visitor management, lost-device handling, incidents, and audit logging.
 
-University gates often rely on handwritten records when students or staff bring laptops, computers, cameras, and other valuable devices onto campus.
+## Product focus
 
-This creates several problems:
+The system is designed around the real university gate process:
 
-* Device information is recorded manually in physical books.
-* Different gates may not have immediate access to the same records.
-* Returning through a different gate can make verification difficult.
-* Device movement history is difficult to audit.
-* Lost devices may not be immediately visible to gate officers.
-* Visitor and temporary device access can be difficult to track.
-* Security incidents require manual investigation and documentation.
+1. A device is registered once by a gate officer.
+2. The system creates a unique Asset ID and QR record.
+3. The officer verifies the device at the gate.
+4. The device is checked out when leaving campus.
+5. The device status becomes OUTSIDE_CAMPUS.
+6. The device is checked in later when returning.
+7. The device status becomes INSIDE_CAMPUS.
+8. Each movement is recorded with officer, gate, device, and timestamp.
 
-## The Solution
+There is no temporary device exit approval workflow in the current product direction. The real movement lifecycle remains authoritative and separate from any future administrative processes.
 
-CampusGate provides one centralized system shared across all university gates.
-
-A device is registered **once** during its first verified entry. The system generates a unique Asset ID and QR code.
-
-After registration:
-
-```text
-ENROLL ONCE
-     ↓
-DEVICE INSIDE CAMPUS
-     ↓
-CHECK OUT WHEN LEAVING
-     ↓
-DEVICE OUTSIDE CAMPUS
-     ↓
-CHECK IN WHEN RETURNING
-     ↓
-DEVICE INSIDE CAMPUS
-```
-
-The device can be checked in or out through **any authorized campus gate** because every gate uses the same central database.
-
-## Core Features
-
-### Device Management
-
-* One-time device enrollment
-* Laptop, tablet, phone, camera, monitor, and other device types
-* Unique Asset ID
-* Unique serial number
-* QR code generation
-* Device ownership information
-* Device status tracking
-* Device photos
-* Complete movement history
-
-### QR Verification
-
-Gate officers can quickly identify a registered device by scanning its QR code.
-
-The QR code contains only a unique asset identifier and does not expose sensitive personal information.
-
-Officers can also search using:
-
-* Asset ID
-* Serial number
-* Student/Staff ID
-
-### Gate Check-In / Check-Out
-
-Every device movement records:
-
-* Device
-* Owner
-* Gate
-* Gate officer
-* Action
-* Date and time
-
-The system prevents invalid transactions such as checking out a device that is already outside campus or checking in a device that is already inside.
-
-### Cross-Gate Verification
-
-Because all gates share the same central system, device history is available regardless of which gate was previously used.
-
-Example:
+## Core workflow
 
 ```text
-10:32 AM
-Gate 1
+REGISTER DEVICE
+     ↓
+VERIFY AT GATE
+     ↓
 CHECK OUT
-       ↓
-Device status: OUTSIDE CAMPUS
-       ↓
-12:41 PM
-Gate 3
+     ↓
+OUTSIDE_CAMPUS
+     ↓
 CHECK IN
-       ↓
-Device status: INSIDE CAMPUS
+     ↓
+INSIDE_CAMPUS
 ```
 
-The Gate 3 officer can immediately see the previous Gate 1 transaction.
-
-### Lost Device Reporting
-
-Students and staff can report a registered device as lost.
-
-When a device is reported lost:
-
-* Its status changes to `LOST`.
-* The report is recorded with the time and owner.
-* The last known movement is preserved.
-* Every gate can see the security warning.
-* Officers cannot process the device through normal check-in/check-out.
-* An incident can be created for investigation.
-* Administrators can resolve or update the incident after verification.
-
-The system distinguishes **LOST** from **STOLEN** so that a lost report does not automatically make an unsupported accusation.
-
-### Visitor Management
-
-* Visitor registration
-* Visitor requests
-* QR visitor passes
-* Visitor check-in
-* Visitor check-out
-* Visit history
-* Expired pass handling
-
-### Temporary Device Exit Authorization
-
-Some university-owned equipment may need to temporarily leave campus.
-
-CampusGate supports controlled authorization requests for devices such as:
-
-* Projectors
-* Cameras
-* Laboratory equipment
-* University laptops
-* Other institutional assets
-
-Requests can be reviewed and authorized before the device is checked out.
-
-### Incident Management
-
-Security officers can create incidents for situations such as:
-
-* Lost device
-* Owner mismatch
-* Unknown device
-* Suspicious device movement
-* Unauthorized exit attempt
-* Other security events
-
-Administrators can investigate, update, assign, and resolve incidents.
-
-### Audit Logs
-
-Important security actions are recorded for accountability.
-
-Examples include:
-
-* Device registration
-* Check-in
-* Check-out
-* Lost-device reports
-* Visitor activity
-* Authorization decisions
-* Incident creation
-* Administrative changes
-
-Each event can include the responsible user, gate, action, timestamp, and related entity.
-
-## User Roles
-
-CampusGate uses three primary roles:
-
-### Student / Staff
-
-Can:
-
-* View registered devices
-* View device QR codes
-* View movement history
-* Report a device as lost
-* Request temporary device authorization
-* Submit visitor requests where applicable
-
-### Gate Officer
-
-Can:
-
-* Verify student/staff identity
-* Register new devices
-* Scan QR codes
-* Search devices
-* Verify physical devices
-* Check devices in and out
-* Process visitors
-* Create security incidents
-* View relevant device history
-
-The officer's active gate is determined through their assigned shift rather than requiring them to manually select a gate for every transaction.
-
-### Administrator
-
-Can:
-
-* Manage users
-* Manage gate officers
-* Manage gates
-* Manage officer shifts
-* Manage devices
-* Manage visitor records
-* Review device requests
-* Manage incidents
-* View audit logs
-* Generate reports
-* View analytics
-* Manage system settings
-
-## Localization
-
-CampusGate supports:
-
-* **Amharic**
-* **English**
-
-The gate officer experience is designed with an **Amharic-first interface** so that essential security operations remain understandable and fast.
-
-All user-facing text is designed to come from localization dictionaries rather than being hardcoded throughout the application.
-
-## Technology Stack
+## Real system components
 
 ### Frontend
 
-* Next.js
-* TypeScript
-* React
-* Tailwind CSS
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind-based design system
+- Role-aware dashboards for students, officers, and admins
 
 ### Backend
 
-* Node.js
-* Express
-* TypeScript
+- FastAPI
+- Pydantic v2
+- SQLAlchemy 2
+- Alembic migrations
+- PostgreSQL
 
-### Database
-
-* PostgreSQL
-* Prisma ORM
-
-### Security & Validation
-
-* Role-Based Access Control
-* Authentication
-* Zod validation
-* Secure API design
-* Audit logging
-
-## Architecture
-
-The project is designed around a clear separation between the frontend, backend, and database.
+### Architecture
 
 ```text
-┌──────────────────────────────┐
-│          Frontend            │
-│       Next.js + React        │
-└──────────────┬───────────────┘
-               │
-               │ REST API
-               ↓
-┌──────────────────────────────┐
-│           Backend            │
-│    Node.js + Express + TS    │
-│                              │
-│ Auth / Services / Validation │
-│ Business Rules / Audit Logs  │
-└──────────────┬───────────────┘
-               │
-               │ Prisma
-               ↓
-┌──────────────────────────────┐
-│          PostgreSQL          │
-│                              │
-│ Users / Devices / Gates      │
-│ Shifts / Transactions        │
-│ Visitors / Incidents / Logs  │
-└──────────────────────────────┘
+Frontend (Next.js)
+   └── calls REST APIs
+         ↓
+Backend (FastAPI)
+   ├── auth / RBAC
+   ├── devices
+   ├── gate assignments
+   ├── movements
+   ├── lost device workflow
+   ├── visitors / visits
+   ├── incidents
+   └── audit logs
+         ↓
+PostgreSQL database
 ```
 
-## Key Business Rules
+## Main features implemented
 
-1. A device is enrolled only once.
-2. Every device has a unique serial number.
-3. Every registered device receives a unique Asset ID.
-4. QR codes identify devices quickly.
-5. A device cannot be checked out while already outside campus.
-6. A device cannot be checked in while already inside campus.
-7. Every movement transaction belongs to a gate.
-8. Every movement transaction belongs to a gate officer.
-9. The active gate is determined by the officer's shift assignment.
-10. All campus gates use the same central system.
-11. Lost devices trigger a security warning.
-12. Lost devices cannot be processed through normal movement operations until appropriately resolved.
-13. Owner mismatches can trigger an incident.
-14. Important security operations create audit records.
-15. Students and staff cannot directly modify security transaction records.
+### Device lifecycle
 
-## Project Status
+- Device enrollment by authorized users
+- QR and asset ID lookup
+- Search by serial number and owner information
+- Check-out and check-in workflows
+- Device status tracking: INSIDE_CAMPUS, OUTSIDE_CAMPUS, LOST, REPORTED_LOST
+- Movement history tied to gate and officer
 
-CampusGate is being developed as a full-stack university security and asset management system.
+### Gate operations
 
-The project focuses on demonstrating real-world software engineering concepts including:
+- Gate officer assignment by active shift
+- Officer dashboard showing the current active gate
+- Device verification before movement actions
+- Real gate-based movement actions without manual gate selection during check-in/check-out
 
-* Role-based access control
-* Centralized data management
-* Transactional business rules
-* Security workflows
-* QR-based verification
-* Auditability
-* Incident management
-* Localization
-* Responsive interfaces
-* API architecture
-* Database design
+### Lost device workflow
 
-## Project Goal
+- Report lost for a registered device
+- Device moves to REPORTED_LOST
+- Lost-device incident is created in the real workflow
+- Administrative recovery is supported through the configured device lifecycle
 
-The goal of CampusGate is to demonstrate how a real university gate operation can move from fragmented manual records to a centralized, auditable, and secure digital platform.
+### Visitor management
 
-> **Register once. Verify anywhere. Track every movement.**
+- Visitor and visit records
+- Pending, approved, checked-in, checked-out, rejected, and expiry flows
+- Gate officer and admin handling through the existing API layer
+
+### Incident management
+
+- Incident lifecycle tracking
+- Device and owner details visible in the UI
+- Status visibility and administrative handling
+
+### Audit logs
+
+- Security-relevant system actions are recorded
+- Admin dashboard can expose the audit trail through real API data
+
+## Roles and permissions
+
+The project uses backend authorization as the source of truth.
+
+### Student / staff
+
+- View their own devices
+- View their own device movement history
+- Use student-facing device actions
+
+### Gate officer
+
+- Verify devices at gates
+- Perform check-in/check-out actions
+- View gate-related movement data
+- Handle visitor and incident workflows as allowed by backend permissions
+
+### Administrator
+
+- Manage devices, gates, gate assignments, incidents, visitors, and audit logs
+- Review security and operational telemetry
+
+## Local development setup
+
+### Prerequisites
+
+- Node.js 20+
+- Python 3.11+
+- Docker Desktop or Docker Engine (for PostgreSQL if using the included compose file)
+
+### 1. Install frontend dependencies
+
+```bash
+npm install
+```
+
+### 2. Start PostgreSQL
+
+The repository includes a local container definition for Postgres.
+
+```bash
+docker compose up -d postgres
+```
+
+If you are using a different database, update the backend `DATABASE_URL` environment variable to match it.
+
+### 3. Configure backend environment
+
+Create a `.env` file in the `backend` folder with values like:
+
+```env
+APP_NAME=CampusGate API
+APP_VERSION=1.0.0
+ENVIRONMENT=development
+DATABASE_URL=postgresql+psycopg://campusgate:campusgate_dev_password@localhost:5433/campusgate
+JWT_SECRET_KEY=replace-with-a-long-random-secret
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
+
+If you connect to a managed PostgreSQL service instead of the Docker local database, replace the URL with the correct connection string.
+
+### 4. Create and activate a Python virtual environment
+
+```bash
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+On macOS/Linux:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+```
+
+### 5. Install backend Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 6. Run database migrations
+
+```bash
+alembic upgrade head
+```
+
+### 7. Start backend
+
+```bash
+cd backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The API will be available at:
+
+- http://localhost:8000
+- http://localhost:8000/docs
+
+### 8. Start frontend
+
+Open a new terminal and run:
+
+```bash
+npm run dev
+```
+
+Frontend runs on:
+
+- http://localhost:3000
+
+## Common verification commands
+
+From the repository root:
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+From the backend directory:
+
+```bash
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m alembic check
+```
+
+## Current repository status
+
+This codebase currently focuses on the real device gate workflow and related operational systems:
+
+- device registration and ownership
+- gate officer check-in/check-out
+- active gate assignment
+- lost-device reporting and recovery
+- visitor lifecycle management
+- incident tracking
+- audit and operational telemetry
+
+It intentionally does not include a separate temporary exit request feature.
+
+## Notes
+
+- Backend authorization is the security boundary; frontend hiding is not a substitute for real RBAC.
+- Gate assignments remain authoritative for active gate detection.
+- Device movement status changes happen through the real check-in/check-out flow.
+- The system is meant to support an operational gate-book replacement rather than a separate approval workflow.
+
+## Project goals
+
+CampusGate is intended to provide an enterprise-style digital gate process that:
+
+- reduces manual paper records
+- improves accountability across gates
+- supports real device lifecycle tracking
+- maintains a clear audit trail
+- keeps gate operations fast and verifiable
+
+> The goal is operational integrity and traceability, not feature sprawl.
+
