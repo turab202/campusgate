@@ -23,7 +23,7 @@ export default function RegisterPage() {
   useEffect(() => { setLocale(language === 'am' ? 'am' : 'en'); }, [language]);
 
   const [form, setForm] = useState({
-    name: '', studentId: '', department: '', email: '', phone: '', password: '', confirmPassword: '',
+    name: '', studentId: '', department: '', email: '', phone: '', password: '', confirmPassword: '', role: 'STUDENT' as 'STUDENT' | 'STAFF',
   });
   const [errors, setErrors] = useState<Partial<typeof form>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export default function RegisterPage() {
         email: form.email.trim(),
         phone: form.phone.trim() || null,
         password: form.password,
-        role: 'STUDENT',
+        role: form.role,
       });
 
       const successMessage = locale === 'am'
@@ -130,11 +130,24 @@ export default function RegisterPage() {
               placeholder={locale === 'am' ? 'ለምሳሌ: ሶፍትዌር ምህንድስና' : 'e.g. Software Engineering'}
               value={form.department} onChange={(e) => field('department', e.target.value)} disabled={submitting} />
           </FormField>
-          <FormField label={t.phone}>
-            <Input id="phone" type="tel" autoComplete="tel" placeholder="+251 91 000 0000"
-              value={form.phone} onChange={(e) => field('phone', e.target.value)} disabled={submitting} />
+          <FormField label={locale === 'am' ? 'አካውንት አይነት' : 'Account type'}>
+            <select
+              id="account-role"
+              value={form.role}
+              onChange={(e) => field('role', e.target.value as 'STUDENT' | 'STAFF')}
+              disabled={submitting}
+              className="h-11 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary-soft)]"
+            >
+              <option value="STUDENT">Student</option>
+              <option value="STAFF">Staff</option>
+            </select>
           </FormField>
         </div>
+
+        <FormField label={t.phone}>
+          <Input id="phone" type="tel" autoComplete="tel" placeholder="+251 91 000 0000"
+            value={form.phone} onChange={(e) => field('phone', e.target.value)} disabled={submitting} />
+        </FormField>
 
         <FormField label={locale === 'am' ? 'የዩኒቨርሲቲ ኢሜይል' : 'University Email'} error={errors.email}>
           <Input id="email" type="email" autoComplete="email"

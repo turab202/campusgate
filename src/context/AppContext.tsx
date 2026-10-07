@@ -14,7 +14,25 @@ import { ApiError, clearToken, getToken, setToken } from '../services/api';
 function toFrontendRole(r: BackendRole): UserRole {
   if (r === 'GATE_OFFICER') return 'OFFICER';
   if (r === 'ADMIN') return 'ADMIN';
-  return 'STUDENT'; // STUDENT + STAFF both use student portal
+  return 'STUDENT'; // STUDENT + STAFF share the student-facing portal
+}
+
+function toCurrentStudent(authUser: AuthUser | null, fallback: Student): Student {
+  if (!authUser || (authUser.role !== 'STUDENT' && authUser.role !== 'STAFF')) return fallback;
+
+  const campusId = authUser.campus_id ?? authUser.email.split('@')[0] ?? 'STUDENT';
+  return {
+    id: authUser.id,
+    name: authUser.name,
+    email: authUser.email,
+    role: 'STUDENT',
+    avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.name)}&background=1E3A5F&color=fff&size=128`,
+    phone: authUser.phone ?? '',
+    studentId: campusId,
+    department: 'Campus Access',
+    batchYear: new Date().getFullYear(),
+    status: authUser.is_active ? 'ACTIVE' : 'SUSPENDED',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +126,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const officers = campusStore.getOfficers();
   const activeOfficer = officers.find((o) => o.id === activeOfficerId) ?? officers[0];
   const students = campusStore.getStudents();
-  const currentStudent = students.find((s) => s.id === currentStudentId) ?? students[0];
+  const fallbackStudent = students.find((s) => s.id === currentStudentId) ?? students[0];
+  const currentStudent = toCurrentStudent(authUser, fallbackStudent);
 
   // Derived auth values
   const role: UserRole = authUser ? toFrontendRole(authUser.role) : 'STUDENT';
