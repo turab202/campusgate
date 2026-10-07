@@ -109,15 +109,13 @@ export const AdminDashboard: React.FC = () => {
     } catch { setOfficerResults([]); }
   };
 
-  const mockGates = campusStore.getGates();
-
   const totalEnrolled = apiDevices.length;
   const currentlyInside = apiDevices.filter((d) => d.status === 'INSIDE_CAMPUS').length;
   const currentlyOutside = apiDevices.filter((d) => d.status === 'OUTSIDE_CAMPUS').length;
   const currentlyLost = apiDevices.filter((d) => d.status === 'LOST' || d.status === 'REPORTED_LOST').length;
-  const totalCheckInsToday = mockGates.reduce((acc, gate) => acc + gate.todayStats.checkIns, 0);
-  const totalCheckOutsToday = mockGates.reduce((acc, gate) => acc + gate.todayStats.checkOuts, 0);
-  const totalIncidentsOpen = 0;
+  const totalCheckInsToday = apiMovements.filter((m) => m.movement_type === 'CHECK_IN').length;
+  const totalCheckOutsToday = apiMovements.filter((m) => m.movement_type === 'CHECK_OUT').length;
+  const totalIncidentsOpen = apiIncidents.filter((i) => i.status === 'OPEN').length;
 
   const filteredDevices = apiDevices.filter((d) => {
     if (deviceStatusFilter !== 'ALL' && d.status !== deviceStatusFilter) return false;

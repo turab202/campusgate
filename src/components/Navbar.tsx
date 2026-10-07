@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ShieldCheck, Bell, MapPin, LogOut, GraduationCap, UserCheck, ChevronDown } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { campusStore } from '../services/storage';
+import { listGatesApi } from '../services/gateService';
+import { listIncidentsApi } from '../services/incidentService';
 import { LanguageSelector } from './LanguageSelector';
 
 const ROLE_CONFIG = {
@@ -13,10 +14,39 @@ const ROLE_CONFIG = {
 export const Navbar: React.FC = () => {
   const { role, currentUser, logout, language, t, currentGateId, setCurrentGateId } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [gates, setGates] = useState<{ id: string; name: string; nameAmharic: string }[]>([]);
+  const [openCount, setOpenCount] = useState(0);
 
-  const gates = campusStore.getGates();
-  const incidents = campusStore.getIncidents();
-  const openCount = incidents.filter((i) => i.status === 'OPEN').length;
+  useEffect(() => {
+    const loadLiveMeta = async () => {
+      if (!currentUser) {
+        setGates([]);
+        setOpenCount(0);
+        return;
+      }
+
+      try {
+        const [gateResults, incidentResults] = await Promise.all([
+          listGatesApi(),
+          listIncidentsApi({ status: 'OPEN' }),
+        ]);
+
+        const mappedGates = gateResults.map((gate) => ({
+          id: gate.id,
+          name: gate.name,
+          nameAmharic: gate.name,
+        }));
+
+        setGates(mappedGates);
+        setOpenCount(incidentResults.length);
+      } catch {
+        setGates([]);
+        setOpenCount(0);
+      }
+    };
+
+    loadLiveMeta();
+  }, [currentUser]);
 
   const roleConf = ROLE_CONFIG[role] ?? ROLE_CONFIG.STUDENT;
   const RoleIcon = roleConf.icon;

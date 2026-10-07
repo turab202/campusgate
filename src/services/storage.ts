@@ -9,17 +9,6 @@ import {
   Student,
   VisitorPass
 } from '../types';
-import {
-  initialAuditLogs,
-  initialDevices,
-  initialGates,
-  initialIncidents,
-  initialMovements,
-  initialOfficers,
-  initialShifts,
-  initialStudents,
-  initialVisitors
-} from './mockData';
 
 const STORAGE_KEYS = {
   DEVICES: 'campusgate_devices_v3',
@@ -68,15 +57,15 @@ function saveToStorage<T>(key: string, data: T): void {
 
 // In-memory runtime with storage sync
 class CampusGateStore {
-  private devices: Device[] = loadFromStorage(STORAGE_KEYS.DEVICES, initialDevices);
-  private movements: MovementTransaction[] = loadFromStorage(STORAGE_KEYS.MOVEMENTS, initialMovements);
-  private gates: Gate[] = loadFromStorage(STORAGE_KEYS.GATES, initialGates);
-  private officers: GateOfficer[] = loadFromStorage(STORAGE_KEYS.OFFICERS, initialOfficers);
-  private shifts: GateShift[] = loadFromStorage(STORAGE_KEYS.SHIFTS, initialShifts);
-  private students: Student[] = loadFromStorage(STORAGE_KEYS.STUDENTS, initialStudents);
-  private visitors: VisitorPass[] = loadFromStorage(STORAGE_KEYS.VISITORS, initialVisitors);
-  private incidents: SecurityIncident[] = loadFromStorage(STORAGE_KEYS.INCIDENTS, initialIncidents);
-  private auditLogs: AuditLog[] = loadFromStorage(STORAGE_KEYS.AUDIT, initialAuditLogs);
+  private devices: Device[] = loadFromStorage(STORAGE_KEYS.DEVICES, [] as Device[]);
+  private movements: MovementTransaction[] = loadFromStorage(STORAGE_KEYS.MOVEMENTS, [] as MovementTransaction[]);
+  private gates: Gate[] = loadFromStorage(STORAGE_KEYS.GATES, [] as Gate[]);
+  private officers: GateOfficer[] = loadFromStorage(STORAGE_KEYS.OFFICERS, [] as GateOfficer[]);
+  private shifts: GateShift[] = loadFromStorage(STORAGE_KEYS.SHIFTS, [] as GateShift[]);
+  private students: Student[] = loadFromStorage(STORAGE_KEYS.STUDENTS, [] as Student[]);
+  private visitors: VisitorPass[] = loadFromStorage(STORAGE_KEYS.VISITORS, [] as VisitorPass[]);
+  private incidents: SecurityIncident[] = loadFromStorage(STORAGE_KEYS.INCIDENTS, [] as SecurityIncident[]);
+  private auditLogs: AuditLog[] = loadFromStorage(STORAGE_KEYS.AUDIT, [] as AuditLog[]);
 
   // Listeners for reactive updates
   private listeners: Set<() => void> = new Set();
@@ -91,15 +80,15 @@ class CampusGateStore {
   }
 
   public resetAll(): void {
-    this.devices = [...initialDevices];
-    this.movements = [...initialMovements];
-    this.gates = [...initialGates];
-    this.officers = [...initialOfficers];
-    this.shifts = [...initialShifts];
-    this.students = [...initialStudents];
-    this.visitors = [...initialVisitors];
-    this.incidents = [...initialIncidents];
-    this.auditLogs = [...initialAuditLogs];
+    this.devices = [];
+    this.movements = [];
+    this.gates = [];
+    this.officers = [];
+    this.shifts = [];
+    this.students = [];
+    this.visitors = [];
+    this.incidents = [];
+    this.auditLogs = [];
 
     const storage = getStorage();
     Object.values(STORAGE_KEYS).forEach((k) => storage?.removeItem(k));

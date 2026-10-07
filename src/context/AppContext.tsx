@@ -6,6 +6,7 @@ import { Gate, GateOfficer, Student, UserRole } from '../types';
 import { campusStore } from '../services/storage';
 import { AuthUser, BackendRole, loginApi, meApi, meToAuthUser } from '../services/authService';
 import { ApiError, clearToken, getToken, setToken } from '../services/api';
+import { listGatesApi } from '../services/gateService';
 
 // ---------------------------------------------------------------------------
 // Backend role → frontend UserRole
@@ -71,6 +72,42 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const emptyGate = (): Gate => ({
+  id: '',
+  code: 'N/A',
+  name: 'No gate assigned',
+  nameAmharic: 'የተመደበ በር የለም',
+  locationDescription: '',
+  status: 'ACTIVE',
+  todayStats: { checkIns: 0, checkOuts: 0, visitors: 0, incidents: 0 },
+});
+
+const emptyOfficer = (): GateOfficer => ({
+  id: '',
+  name: 'No officer assigned',
+  email: '',
+  role: 'OFFICER',
+  avatarUrl: '',
+  phone: '',
+  officerBadgeId: 'N/A',
+  assignedGateId: '',
+  currentShift: 'OFFLINE',
+  stationStatus: 'OFF_DUTY',
+});
+
+const emptyStudent = (): Student => ({
+  id: '',
+  name: 'No user',
+  email: '',
+  role: 'STUDENT',
+  avatarUrl: '',
+  phone: '',
+  studentId: 'N/A',
+  department: 'Not assigned',
+  batchYear: new Date().getFullYear(),
+  status: 'ACTIVE',
+});
+
 // ---------------------------------------------------------------------------
 // localStorage helpers (SSR-safe)
 // ---------------------------------------------------------------------------
@@ -109,12 +146,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const [activeOfficerId, setActiveOfficerIdState] = useState<string>('off-1');
   const [currentStudentId, setCurrentStudentIdState] = useState<string>('stud-1');
+  const [liveGates, setLiveGates] = useState<Gate[]>([]);
 
   useEffect(() => {
     if (authUser && (authUser.role === 'STUDENT' || authUser.role === 'STAFF')) {
       setCurrentStudentIdState(authUser.id);
     }
   }, [authUser]);
+
+  useEffect(() => {
+    if (!authUser) {
+      setLiveGates([]);
+      return;
+    }
+
+    if (authUser.role === 'ADMIN' || authUser.role === 'GATE_OFFICER') {
+      listGatesApi()
+        .then((gates) => {
+          const mapped: Gate[] = gates.map((gate) => ({
+            id: gate.id,
+            code: gate.code,
+            name: gate.name,
+            nameAmharic: gate.name,
+            locationDescription: gate.location ?? '',
+            status: 'ACTIVE',
+            todayStats: { checkIns: 0, checkOuts: 0, visitors: 0, incidents: 0 },
+          }));
+          setLiveGates(mapped);
+          if (mapped.length > 0 && !mapped.some((g) => g.id === currentGateId)) {
+            setCurrentGateIdState(mapped[0].id);
+          }
+        })
+        .catch(() => setLiveGates([]));
+    } else {
+      setLiveGates([]);
+    }
+  }, [authUser, currentGateId]);
 
   // ── UI ────────────────────────────────────────────────────────────────────
   const [isOffline, setIsOffline] = useState(false);
@@ -127,12 +194,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => campusStore.subscribe(() => setStoreTick((t) => t + 1)), []);
 
   // Derived mock entities
-  const gates = campusStore.getGates();
-  const currentGate = gates.find((g) => g.id === currentGateId) ?? gates[0];
+  const gates = liveGates.length > 0 ? liveGates : campusStore.getGates();
+  const currentGate = gates.find((g) => g.id === currentGateId) ?? emptyGate();
   const officers = campusStore.getOfficers();
-  const activeOfficer = officers.find((o) => o.id === activeOfficerId) ?? officers[0];
+  const activeOfficer = officers.find((o) => o.id === activeOfficerId) ?? emptyOfficer();
   const students = campusStore.getStudents();
-  const fallbackStudent = students.find((s) => s.id === currentStudentId) ?? students[0];
+  const fallbackStudent = students.find((s) => s.id === currentStudentId) ?? emptyStudent();
   const currentStudent = toCurrentStudent(authUser, fallbackStudent);
 
   // Derived auth values
