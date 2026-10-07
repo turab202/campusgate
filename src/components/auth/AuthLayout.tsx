@@ -52,8 +52,8 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             {/* Main content */}
             <div className="flex flex-1 flex-col justify-center">
               {rightPanel ?? (
-                <div className="space-y-8">
-                  <div className="space-y-4">
+                <div className="space-y-10">
+                  <div className="space-y-5">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       University Security Platform
@@ -66,7 +66,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
                     </p>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     {features.map(({ icon: Icon, label, desc }) => (
                       <div key={label} className="flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10">
@@ -84,7 +84,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             </div>
 
             {/* Bottom badge */}
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="mt-8 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
               <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs text-white/60">3 gates online · CampusGate</span>
             </div>
