@@ -110,6 +110,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeOfficerId, setActiveOfficerIdState] = useState<string>('off-1');
   const [currentStudentId, setCurrentStudentIdState] = useState<string>('stud-1');
 
+  useEffect(() => {
+    if (authUser && (authUser.role === 'STUDENT' || authUser.role === 'STAFF')) {
+      setCurrentStudentIdState(authUser.id);
+    }
+  }, [authUser]);
+
   // ── UI ────────────────────────────────────────────────────────────────────
   const [isOffline, setIsOffline] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'error' | 'info' } | null>(null);
