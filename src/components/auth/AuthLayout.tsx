@@ -53,7 +53,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             <div className="flex flex-1 flex-col justify-center">
               {rightPanel ?? (
                 <div className="space-y-6">
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       University Security Platform
