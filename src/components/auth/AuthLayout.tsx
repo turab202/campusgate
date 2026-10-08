@@ -27,7 +27,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
 
         {/* ── Left branding panel ── */}
         <div
-          className="hidden lg:flex lg:w-[44%] lg:flex-none flex-col justify-between lg:sticky lg:top-0 lg:h-screen overflow-hidden"
+          className="hidden lg:flex lg:w-[44%] lg:flex-none flex-col justify-between lg:sticky lg:top-0 lg:h-screen overflow-x-hidden overflow-y-auto"
           style={{ background: 'linear-gradient(145deg, #0F2340 0%, #1E3A5F 45%, #2D5282 100%)' }}
         >
           {/* Decorative circles */}
