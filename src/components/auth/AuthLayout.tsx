@@ -50,7 +50,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             </div>
 
             {/* Main content */}
-            <div className="flex flex-1 flex-col justify-start pt-8">
+            <div className="flex flex-1 flex-col justify-start pt-[clamp(1.5rem,6vh,3rem)]">
               {rightPanel ?? (
                 <div className="space-y-8">
                   <div className="space-y-6">
