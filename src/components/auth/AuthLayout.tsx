@@ -27,7 +27,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
 
         {/* ── Left branding panel ── */}
         <div
-          className="hidden lg:flex lg:w-[44%] lg:flex-none flex-col justify-between lg:sticky lg:top-0 lg:h-screen overflow-hidden"
+          className="relative hidden lg:flex lg:w-[44%] lg:flex-none flex-col lg:sticky lg:top-0 lg:min-h-screen overflow-hidden"
           style={{ background: 'linear-gradient(145deg, #0F2340 0%, #1E3A5F 45%, #2D5282 100%)' }}
         >
           {/* Decorative circles */}
@@ -37,7 +37,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full opacity-5" style={{ background: 'radial-gradient(circle, #BFDBFE, transparent)' }} />
           </div>
 
-          <div className="relative z-10 flex flex-col h-full px-10 py-10 xl:px-14">
+          <div className="relative z-10 flex min-h-screen flex-col px-10 py-10 xl:px-14">
             {/* Logo */}
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm border border-white/20">
@@ -50,7 +50,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             </div>
 
             {/* Main content */}
-            <div className="flex flex-1 flex-col justify-start pt-[clamp(1.5rem,6vh,3rem)]">
+            <div className="flex flex-col justify-start pt-[clamp(1.5rem,6vh,3rem)]">
               {rightPanel ?? (
                 <div className="space-y-8">
                   <div className="space-y-6">
@@ -84,7 +84,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             </div>
 
             {/* Bottom badge */}
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
               <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs text-white/60">3 gates online · CampusGate</span>
             </div>
