@@ -27,7 +27,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
 
         {/* ── Left branding panel ── */}
         <div
-          className="hidden lg:flex lg:w-[47%] lg:flex-none flex-col justify-between lg:sticky lg:top-0 lg:h-screen overflow-hidden"
+          className="hidden lg:flex lg:w-[44%] lg:flex-none flex-col justify-between lg:sticky lg:top-0 lg:h-screen overflow-hidden"
           style={{ background: 'linear-gradient(145deg, #0F2340 0%, #1E3A5F 45%, #2D5282 100%)' }}
         >
           {/* Decorative circles */}
@@ -53,7 +53,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             <div className="flex flex-1 flex-col justify-center">
               {rightPanel ?? (
                 <div className="space-y-8">
-                  <div className="space-y-7">
+                  <div className="space-y-6">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       University Security Platform
@@ -84,7 +84,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             </div>
 
             {/* Bottom badge */}
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
               <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs text-white/60">3 gates online · CampusGate</span>
             </div>
