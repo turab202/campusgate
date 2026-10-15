@@ -1,6 +1,6 @@
 from urllib.parse import urlsplit
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +21,19 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    @model_validator(mode="before")
+    @classmethod
+    def default_production_cors_origin(cls, values):
+        if not isinstance(values, dict):
+            return values
+
+        environment = values.get("ENVIRONMENT", values.get("environment", "development"))
+        origins = values.get("CORS_ORIGINS", ["http://localhost:3000"])
+        if str(environment).lower() == "production" and origins == ["http://localhost:3000"]:
+            values = dict(values)
+            values["CORS_ORIGINS"] = ["https://campusgate-omega.vercel.app"]
+        return values
 
     @field_validator("DATABASE_URL", "JWT_SECRET_KEY")
     @classmethod

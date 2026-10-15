@@ -41,3 +41,15 @@ def test_production_accepts_explicit_https_origins():
         "https://campusgate.example",
         "https://admin.campusgate.example",
     ]
+
+
+def test_production_defaults_to_deployed_frontend_origin():
+    settings = Settings(
+        _env_file=None,
+        ENVIRONMENT="production",
+        DATABASE_URL="postgresql+psycopg://user:password@localhost/db",
+        JWT_SECRET_KEY="a" * 32,
+        CORS_ORIGINS=["http://localhost:3000"],
+    )
+
+    assert settings.CORS_ORIGINS == ["https://campusgate-omega.vercel.app"]
