@@ -175,6 +175,7 @@ Create a `.env` file in the `backend` folder with values like:
 APP_NAME=CampusGate API
 APP_VERSION=1.0.0
 ENVIRONMENT=development
+CORS_ORIGINS=["http://localhost:3000"]
 DATABASE_URL=postgresql+psycopg://campusgate:campusgate_dev_password@localhost:5433/campusgate
 JWT_SECRET_KEY=replace-with-a-long-random-secret
 JWT_ALGORITHM=HS256
@@ -182,6 +183,8 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
 If you connect to a managed PostgreSQL service instead of the Docker local database, replace the URL with the correct connection string.
+
+For production, set `ENVIRONMENT=production`, use a unique randomly generated `JWT_SECRET_KEY`, and set `CORS_ORIGINS` to a JSON array containing only the deployed frontend origins. API documentation endpoints are disabled in production.
 
 ### 4. Create and activate a Python virtual environment
 

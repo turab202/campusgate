@@ -1,13 +1,13 @@
 {
-  "name": "react-example",
+  "name": "campusgate",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next build 2>&1 | findstr /V /C:'warning'"
+    "lint": "eslint app src"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -34,6 +34,6 @@
     "eslint-config-next": "^16.3.6",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
-    "typescript": "^7.0.2"
+    "typescript": "^5.9.3"
   }
 }
