@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Bell, MapPin, LogOut, GraduationCap, UserCheck, ChevronDown } from 'lucide-react';
+import { ShieldCheck, Bell, MapPin, LogOut, GraduationCap, UserCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { listGatesApi } from '../services/gateService';
 import { listIncidentsApi } from '../services/incidentService';
 import { LanguageSelector } from './LanguageSelector';
 
@@ -12,35 +11,21 @@ const ROLE_CONFIG = {
 };
 
 export const Navbar: React.FC = () => {
-  const { role, currentUser, logout, language, t, currentGateId, setCurrentGateId } = useApp();
+  const { role, currentUser, currentGate, logout, language, t } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [gates, setGates] = useState<{ id: string; name: string; nameAmharic: string }[]>([]);
   const [openCount, setOpenCount] = useState(0);
 
   useEffect(() => {
     const loadLiveMeta = async () => {
       if (!currentUser) {
-        setGates([]);
         setOpenCount(0);
         return;
       }
 
       try {
-        const [gateResults, incidentResults] = await Promise.all([
-          listGatesApi(),
-          listIncidentsApi({ status: 'OPEN' }),
-        ]);
-
-        const mappedGates = gateResults.map((gate) => ({
-          id: gate.id,
-          name: gate.name,
-          nameAmharic: gate.name,
-        }));
-
-        setGates(mappedGates);
+        const incidentResults = await listIncidentsApi({ status: 'OPEN' });
         setOpenCount(incidentResults.length);
       } catch {
-        setGates([]);
         setOpenCount(0);
       }
     };
@@ -80,17 +65,9 @@ export const Navbar: React.FC = () => {
           <div className="hidden sm:flex items-center gap-2 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-1.5 text-xs">
             <MapPin className="h-3.5 w-3.5 text-[var(--cg-text-muted)] shrink-0" />
             <span className="text-[var(--cg-text-muted)] font-medium">{t('currentGate')}:</span>
-            <select
-              value={currentGateId}
-              onChange={(e) => setCurrentGateId(e.target.value)}
-              className="bg-transparent text-[var(--cg-text)] font-semibold text-xs focus:outline-none cursor-pointer"
-              aria-label="Select gate"
-            >
-              {gates.map((g) => (
-                <option key={g.id} value={g.id}>{language === 'am' ? g.nameAmharic : g.name}</option>
-              ))}
-            </select>
-            <ChevronDown className="h-3 w-3 text-[var(--cg-text-muted)]" />
+            <span className="text-[var(--cg-text)] font-semibold text-xs">
+              {language === 'am' ? currentGate.nameAmharic : currentGate.name}
+            </span>
           </div>
         )}
 

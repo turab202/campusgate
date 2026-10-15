@@ -207,7 +207,7 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
           <div className="flex items-center gap-3">
             <div className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-right">
               <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-white/60">{t('currentShift')}</span>
-              <span className="text-xs font-semibold text-white">08:00 — 16:00</span>
+              <span className="text-xs font-semibold text-white">{activeOfficer.currentShift}</span>
             </div>
             <div className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-right">
               <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-white/60">{t('assignedOfficer')}</span>
@@ -221,10 +221,10 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
         {/* Stats */}
         <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-white/20 pt-4">
           {[
-            { label: t('checkIns'), value: currentGate.todayStats.checkIns, color: 'text-green-300' },
-            { label: t('checkOuts'), value: currentGate.todayStats.checkOuts, color: 'text-white' },
-            { label: t('activeVisitors'), value: currentGate.todayStats.visitors, color: 'text-amber-300' },
-            { label: t('openIncidents'), value: currentGate.todayStats.incidents, color: 'text-red-300' },
+            { label: t('checkIns'), value: currentGate.todayStats.checkIns ?? '—', color: 'text-green-300' },
+            { label: t('checkOuts'), value: currentGate.todayStats.checkOuts ?? '—', color: 'text-white' },
+            { label: t('activeVisitors'), value: currentGate.todayStats.visitors ?? '—', color: 'text-amber-300' },
+            { label: t('openIncidents'), value: currentGate.todayStats.incidents ?? '—', color: 'text-red-300' },
           ].map(({ label, value, color }) => (
             <div key={label} className="flex items-center justify-between rounded-lg border border-white/20 bg-white/10 px-3 py-2">
               <span className="text-xs text-white/70">{label}</span>

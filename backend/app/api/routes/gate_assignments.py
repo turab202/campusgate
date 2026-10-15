@@ -15,6 +15,7 @@ from app.models.gate import Gate
 from app.models.gate_assignment import GateAssignment
 from app.models.user import User
 from app.schemas.gate_assignment import GateAssignmentCreate, GateAssignmentRead
+from app.services.assignment_service import get_active_assignment
 
 router = APIRouter(prefix="/gate-assignments", tags=["gate-assignments"])
 
@@ -26,6 +27,23 @@ def _require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
             detail="Administrators only",
         )
     return user
+
+
+def _require_officer(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if user.role != UserRole.GATE_OFFICER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Gate officers only",
+        )
+    return user
+
+
+@router.get("/current", response_model=GateAssignmentRead, summary="Current officer gate assignment")
+def current_assignment(
+    db: Session = Depends(get_db),
+    officer: User = Depends(_require_officer),
+):
+    return get_active_assignment(db, officer)
 
 
 @router.get("", response_model=list[GateAssignmentRead], summary="List gate assignments")

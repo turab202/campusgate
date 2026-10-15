@@ -6,7 +6,7 @@ import { Gate, GateOfficer, Student, UserRole } from '../types';
 import { campusStore } from '../services/storage';
 import { AuthUser, BackendRole, loginApi, meApi, meToAuthUser } from '../services/authService';
 import { ApiError, clearToken, getToken, setToken } from '../services/api';
-import { listGatesApi } from '../services/gateService';
+import { GateAssignmentRead, getCurrentAssignmentApi, listGatesApi } from '../services/gateService';
 
 // ---------------------------------------------------------------------------
 // Backend role → frontend UserRole
@@ -46,19 +46,16 @@ interface AppContextType {
   authUser: AuthUser | null;
   isAuthenticated: boolean;
   isAuthLoading: boolean;
+  isGateContextLoading: boolean;
   authError: string | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: keyof typeof translations.en, params?: Record<string, string>) => string;
-  currentGateId: string;
-  setCurrentGateId: (gateId: string) => void;
   currentGate: Gate;
   activeOfficer: GateOfficer;
-  setActiveOfficerId: (officerId: string) => void;
   currentStudent: Student;
-  setCurrentStudentId: (studentId: string) => void;
   isOffline: boolean;
   setIsOffline: (offline: boolean) => void;
   toast: { message: string; type: 'success' | 'warning' | 'error' | 'info' } | null;
@@ -79,7 +76,7 @@ const emptyGate = (): Gate => ({
   nameAmharic: 'የተመደበ በር የለም',
   locationDescription: '',
   status: 'ACTIVE',
-  todayStats: { checkIns: 0, checkOuts: 0, visitors: 0, incidents: 0 },
+  todayStats: { checkIns: null, checkOuts: null, visitors: null, incidents: null },
 });
 
 const emptyOfficer = (): GateOfficer => ({
@@ -140,48 +137,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     () => (ls('cg_lang') as Language) ?? 'en',
   );
 
-  // ── Gate / officer / student (mock-backed for non-integrated workflows) ──
-  const [currentGateId, setCurrentGateIdState] = useState<string>(
-    () => ls('cg_gateId') ?? 'gate-1',
-  );
-  const [activeOfficerId, setActiveOfficerIdState] = useState<string>('off-1');
-  const [currentStudentId, setCurrentStudentIdState] = useState<string>('stud-1');
+  // ── Operational context from the backend ──────────────────────────────────
+  const [currentGateId, setCurrentGateIdState] = useState('');
+  const [activeAssignment, setActiveAssignment] = useState<GateAssignmentRead | null>(null);
   const [liveGates, setLiveGates] = useState<Gate[]>([]);
+  const [isGateContextLoading, setIsGateContextLoading] = useState(true);
 
   useEffect(() => {
-    if (authUser && (authUser.role === 'STUDENT' || authUser.role === 'STAFF')) {
-      setCurrentStudentIdState(authUser.id);
-    }
-  }, [authUser]);
+    let isCurrent = true;
 
-  useEffect(() => {
     if (!authUser) {
       setLiveGates([]);
-      return;
+      setActiveAssignment(null);
+      setCurrentGateIdState('');
+      setIsGateContextLoading(false);
+      return () => { isCurrent = false; };
     }
 
-    if (authUser.role === 'ADMIN' || authUser.role === 'GATE_OFFICER') {
-      listGatesApi()
-        .then((gates) => {
-          const mapped: Gate[] = gates.map((gate) => ({
-            id: gate.id,
-            code: gate.code,
-            name: gate.name,
-            nameAmharic: gate.name,
-            locationDescription: gate.location ?? '',
-            status: 'ACTIVE',
-            todayStats: { checkIns: 0, checkOuts: 0, visitors: 0, incidents: 0 },
-          }));
-          setLiveGates(mapped);
-          if (mapped.length > 0 && !mapped.some((g) => g.id === currentGateId)) {
-            setCurrentGateIdState(mapped[0].id);
-          }
-        })
-        .catch(() => setLiveGates([]));
-    } else {
+    if (authUser.role !== 'ADMIN' && authUser.role !== 'GATE_OFFICER') {
       setLiveGates([]);
+      setActiveAssignment(null);
+      setCurrentGateIdState('');
+      setIsGateContextLoading(false);
+      return () => { isCurrent = false; };
     }
-  }, [authUser, currentGateId]);
+
+    setIsGateContextLoading(true);
+    const loadOperationalContext = async () => {
+      try {
+        const gates = await listGatesApi();
+        if (!isCurrent) return;
+        const mapped: Gate[] = gates.map((gate) => ({
+          id: gate.id,
+          code: gate.code,
+          name: gate.name,
+          nameAmharic: gate.name,
+          locationDescription: gate.location ?? '',
+          status: gate.is_active ? 'ACTIVE' : 'CLOSED',
+          todayStats: { checkIns: null, checkOuts: null, visitors: null, incidents: null },
+        }));
+
+        if (authUser.role === 'GATE_OFFICER') {
+          const assignment = await getCurrentAssignmentApi();
+          if (!isCurrent) return;
+          const assignedGate = mapped.find((gate) => gate.id === assignment.gate_id);
+          if (!assignedGate) throw new Error('Assigned gate is unavailable.');
+          setActiveAssignment(assignment);
+          setLiveGates([assignedGate]);
+          setCurrentGateIdState(assignedGate.id);
+          return;
+        }
+
+        setActiveAssignment(null);
+        setLiveGates(mapped);
+        setCurrentGateIdState(mapped[0]?.id ?? '');
+      } catch {
+        if (isCurrent) {
+          setLiveGates([]);
+          setActiveAssignment(null);
+          setCurrentGateIdState('');
+        }
+      } finally {
+        if (isCurrent) setIsGateContextLoading(false);
+      }
+    };
+
+    void loadOperationalContext();
+    return () => { isCurrent = false; };
+  }, [authUser]);
 
   // ── UI ────────────────────────────────────────────────────────────────────
   const [isOffline, setIsOffline] = useState(false);
@@ -189,18 +212,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeTab, setActiveTab] = useState<string>('gate_scan');
   const [activeDemoAction, setActiveDemoAction] = useState<string | null>(null);
 
-  // Sync mock store re-renders
-  const [, setStoreTick] = useState(0);
-  useEffect(() => campusStore.subscribe(() => setStoreTick((t) => t + 1)), []);
-
-  // Derived mock entities
-  const gates = liveGates.length > 0 ? liveGates : campusStore.getGates();
-  const currentGate = gates.find((g) => g.id === currentGateId) ?? emptyGate();
-  const officers = campusStore.getOfficers();
-  const activeOfficer = officers.find((o) => o.id === activeOfficerId) ?? emptyOfficer();
-  const students = campusStore.getStudents();
-  const fallbackStudent = students.find((s) => s.id === currentStudentId) ?? emptyStudent();
-  const currentStudent = toCurrentStudent(authUser, fallbackStudent);
+  const currentGate = liveGates.find((gate) => gate.id === currentGateId) ?? emptyGate();
+  const shiftTime = (value: string) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const activeOfficer: GateOfficer = authUser?.role === 'GATE_OFFICER'
+    ? {
+        ...emptyOfficer(),
+        id: authUser.id,
+        name: authUser.name,
+        email: authUser.email,
+        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser.name)}&size=128`,
+        phone: authUser.phone ?? '',
+        officerBadgeId: authUser.campus_id ?? 'N/A',
+        assignedGateId: activeAssignment?.gate_id ?? '',
+        currentShift: activeAssignment
+          ? `${shiftTime(activeAssignment.start_time)} – ${activeAssignment.end_time ? shiftTime(activeAssignment.end_time) : 'Open-ended'}`
+          : 'No active assignment',
+        stationStatus: activeAssignment ? 'ON_DUTY' : 'OFF_DUTY',
+      }
+    : emptyOfficer();
+  const currentStudent = toCurrentStudent(authUser, emptyStudent());
 
   // Derived auth values
   const role: UserRole = authUser ? toFrontendRole(authUser.role) : 'STUDENT';
@@ -277,11 +307,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lsSet('cg_lang_manually_set', 'true');
   };
 
-  const setCurrentGateId = (gateId: string) => {
-    setCurrentGateIdState(gateId);
-    lsSet('cg_gateId', gateId);
-  };
-
   const resetAllData = () => {
     campusStore.resetAll();
     showToast('Demo data reset to baseline.', 'info');
@@ -304,20 +329,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveDemoAction(`DEMO_${stepNumber}`);
     if (stepNumber === 1) { setActiveTab('gate_enroll'); showToast('DEMO 1: Ready to enroll new device.', 'info'); }
     else if (stepNumber === 2) { setActiveTab('gate_scan'); showToast('DEMO 2: Searching device for CHECK OUT.', 'info'); }
-    else if (stepNumber === 3) { setCurrentGateId('gate-3'); setActiveTab('gate_scan'); showToast('DEMO 3: Switched to Gate 3.', 'warning'); }
-    else if (stepNumber === 4) { setCurrentGateId('gate-2'); setActiveTab('gate_scan'); showToast('DEMO 4: Scanning LOST device.', 'warning'); }
+    else if (stepNumber === 3) { setActiveTab('gate_scan'); showToast('DEMO 3: Checking the assigned gate.', 'warning'); }
+    else if (stepNumber === 4) { setActiveTab('gate_scan'); showToast('DEMO 4: Scanning a LOST device.', 'warning'); }
     else if (stepNumber === 5) { setActiveTab('gate_visitors'); showToast('DEMO 5: Verifying visitor pass.', 'info'); }
     else if (stepNumber === 6) { setActiveTab('admin_dashboard'); showToast('DEMO 6: Opened Security Command.', 'info'); }
   };
 
   return (
     <AppContext.Provider value={{
-      role, currentUser, authUser, isAuthenticated, isAuthLoading, authError,
+      role, currentUser, authUser, isAuthenticated, isAuthLoading, isGateContextLoading, authError,
       login, logout,
       language, setLanguage, t,
-      currentGateId, setCurrentGateId, currentGate,
-      activeOfficer, setActiveOfficerId: setActiveOfficerIdState,
-      currentStudent, setCurrentStudentId: setCurrentStudentIdState,
+      currentGate, activeOfficer, currentStudent,
       isOffline, setIsOffline,
       toast, showToast,
       resetAllData,

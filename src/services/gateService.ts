@@ -56,6 +56,10 @@ export async function listAssignmentsApi(filters: AssignmentFilters = {}): Promi
   return api.get<GateAssignmentRead[]>(`/gate-assignments${qs ? `?${qs}` : ''}`);
 }
 
+export async function getCurrentAssignmentApi(): Promise<GateAssignmentRead> {
+  return api.get<GateAssignmentRead>('/gate-assignments/current');
+}
+
 export async function createAssignmentApi(body: GateAssignmentCreate): Promise<GateAssignmentRead> {
   return api.post<GateAssignmentRead>('/gate-assignments', body);
 }

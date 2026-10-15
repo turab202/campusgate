@@ -82,10 +82,10 @@ export interface Gate {
     shift: string;
   };
   todayStats: {
-    checkIns: number;
-    checkOuts: number;
-    visitors: number;
-    incidents: number;
+    checkIns: number | null;
+    checkOuts: number | null;
+    visitors: number | null;
+    incidents: number | null;
   };
 }
 

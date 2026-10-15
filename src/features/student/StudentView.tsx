@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { Device } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { campusStore } from '../../services/storage';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { QRPassModal } from '../../components/QRPassModal';
 import { listDevicesApi, reportLostApi, DeviceRead } from '../../services/deviceService';

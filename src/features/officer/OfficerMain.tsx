@@ -8,8 +8,9 @@ import { VisitorManager } from './VisitorManager';
 import { IncidentManager } from './IncidentManager';
 
 export const OfficerMain: React.FC = () => {
-  const { t, activeTab, setActiveTab, activeOfficer, currentGate, language } = useApp();
+  const { t, activeTab, setActiveTab, activeOfficer, currentGate, isGateContextLoading, language } = useApp();
   const [prefilledSerial, setPrefilledSerial] = useState<string>('');
+  const isAssigned = Boolean(currentGate.id);
 
   const handleStartEnrollment = (serial?: string) => {
     if (serial) setPrefilledSerial(serial);
@@ -83,18 +84,18 @@ export const OfficerMain: React.FC = () => {
                   {language === 'am' ? currentGate.nameAmharic : currentGate.name}
                 </h1>
               </div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--cg-success-border)] bg-[var(--cg-success-bg)] px-2.5 py-1 text-[10px] font-bold text-[var(--cg-success)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--cg-success)] animate-pulse" />
-                Active
+              <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-bold ${isAssigned ? 'border-[var(--cg-success-border)] bg-[var(--cg-success-bg)] text-[var(--cg-success)]' : 'border-[var(--cg-warning-border)] bg-[var(--cg-warning-bg)] text-[var(--cg-warning)]'}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${isAssigned ? 'bg-[var(--cg-success)] animate-pulse' : 'bg-[var(--cg-warning)]'}`} />
+                {isGateContextLoading ? 'Loading assignment' : isAssigned ? 'Active' : 'Assignment required'}
               </span>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
-                { label: 'Entries', value: currentGate.todayStats.checkIns, tone: 'text-[var(--cg-success)]' },
-                { label: 'Exits', value: currentGate.todayStats.checkOuts, tone: 'text-[var(--cg-info)]' },
-                { label: 'Visitors', value: currentGate.todayStats.visitors, tone: 'text-[var(--cg-warning)]' },
-                { label: 'Incidents', value: currentGate.todayStats.incidents, tone: 'text-[var(--cg-danger)]' },
+                { label: 'Entries', value: currentGate.todayStats.checkIns ?? '—', tone: 'text-[var(--cg-success)]' },
+                { label: 'Exits', value: currentGate.todayStats.checkOuts ?? '—', tone: 'text-[var(--cg-info)]' },
+                { label: 'Visitors', value: currentGate.todayStats.visitors ?? '—', tone: 'text-[var(--cg-warning)]' },
+                { label: 'Incidents', value: currentGate.todayStats.incidents ?? '—', tone: 'text-[var(--cg-danger)]' },
               ].map(({ label, value, tone }) => (
                 <div key={label} className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-center">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--cg-text-muted)]">{label}</p>
@@ -105,11 +106,19 @@ export const OfficerMain: React.FC = () => {
           </header>
 
           <div>
-            {activeTab === 'gate_scan' && <DeviceScanner onNavigateToEnroll={handleStartEnrollment} />}
-            {activeTab === 'gate_enroll' && <DeviceEnrollment initialSerial={prefilledSerial} onFinished={() => setActiveTab('gate_scan')} />}
-            {activeTab === 'gate_transactions' && <GateTransactions />}
-            {activeTab === 'gate_visitors' && <VisitorManager />}
-            {activeTab === 'gate_incidents' && <IncidentManager />}
+            {isGateContextLoading ? (
+              <p role="status" className="rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 text-sm text-[var(--cg-text-muted)]">Loading gate assignment…</p>
+            ) : !isAssigned ? (
+              <p role="alert" className="rounded-lg border border-[var(--cg-warning-border)] bg-[var(--cg-warning-bg)] p-5 text-sm text-[var(--cg-warning)]">No active gate assignment. Contact an administrator before processing gate operations.</p>
+            ) : (
+              <>
+                {activeTab === 'gate_scan' && <DeviceScanner onNavigateToEnroll={handleStartEnrollment} />}
+                {activeTab === 'gate_enroll' && <DeviceEnrollment initialSerial={prefilledSerial} onFinished={() => setActiveTab('gate_scan')} />}
+                {activeTab === 'gate_transactions' && <GateTransactions />}
+                {activeTab === 'gate_visitors' && <VisitorManager />}
+                {activeTab === 'gate_incidents' && <IncidentManager />}
+              </>
+            )}
           </div>
         </div>
       </div>

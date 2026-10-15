@@ -5,8 +5,8 @@ import {
 } from 'lucide-react';
 import { Device, Student } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { campusStore } from '../../services/storage';
 import { checkInDeviceApi, checkOutDeviceApi } from '../../services/deviceService';
+import { BackendIncidentType, createIncidentApi } from '../../services/incidentService';
 import { ApiError } from '../../services/api';
 
 interface DeviceVerificationModalProps {
@@ -28,7 +28,7 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
   const { t, language, currentGate, activeOfficer, showToast } = useApp();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showIncidentForm, setShowIncidentForm] = useState(false);
-  const [incidentReason, setIncidentReason] = useState('DEVICE_MISMATCH');
+  const [incidentReason, setIncidentReason] = useState<BackendIncidentType>('OWNER_MISMATCH');
   const [incidentNotes, setIncidentNotes] = useState('');
 
   if (!isOpen) return null;
@@ -119,23 +119,23 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
     }
   };
 
-  const handleLogIncident = () => {
-    campusStore.createIncident({
-      type: incidentReason as Parameters<typeof campusStore.createIncident>[0]['type'],
-      title: `Gate Security Incident: ${device.brand} ${device.model} (${device.assetId})`,
-      description: incidentNotes || `Suspicious transaction at ${currentGate.name}.`,
-      gateId: currentGate.id,
-      gateName: currentGate.name,
-      officerBadge: activeOfficer.officerBadgeId,
-      deviceAssetId: device.assetId,
-      deviceSerial: device.serialNumber,
-      studentId: device.ownerStudentId,
-      studentName: device.ownerName,
-      severity: 'HIGH'
-    });
-    showToast('Incident logged into central security registry.', 'warning');
-    setShowIncidentForm(false);
-    onClose();
+  const handleLogIncident = async () => {
+    setIsProcessing(true);
+    try {
+      await createIncidentApi({
+        incident_type: incidentReason,
+        description: incidentNotes.trim() || `Suspicious transaction at ${currentGate.name}.`,
+        device_id: device.id,
+        gate_id: currentGate.id || undefined,
+      });
+      showToast('Incident logged into central security registry.', 'warning');
+      setShowIncidentForm(false);
+      onClose();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Failed to log incident.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const headerBg = isLost
@@ -295,13 +295,13 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
               </div>
               <select
                 value={incidentReason}
-                onChange={(e) => setIncidentReason(e.target.value)}
+                onChange={(e) => setIncidentReason(e.target.value as BackendIncidentType)}
                 className="w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 py-2 text-xs text-[var(--cg-text)]"
               >
                 <option value="LOST_DEVICE">Device Reported Lost</option>
-                <option value="DEVICE_MISMATCH">Owner / Serial Mismatch</option>
+                <option value="OWNER_MISMATCH">Owner / Serial Mismatch</option>
                 <option value="UNAUTHORIZED_EXIT">Unauthorized Exit Attempt</option>
-                <option value="UNKNOWN_DEVICE">Tampered Serial</option>
+                <option value="OTHER">Tampered Serial</option>
               </select>
               <textarea
                 value={incidentNotes}
@@ -312,9 +312,10 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
               />
               <button
                 onClick={handleLogIncident}
+                disabled={isProcessing}
                 className="w-full rounded-lg bg-[var(--cg-danger)] py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
               >
-                Submit Incident to Security Registry
+                {isProcessing ? 'Submitting…' : 'Submit Incident to Security Registry'}
               </button>
             </div>
           )}

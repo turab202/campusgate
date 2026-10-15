@@ -210,7 +210,7 @@ class CampusGateStore {
     saveToStorage(STORAGE_KEYS.MOVEMENTS, this.movements);
 
     // Gate stats bump
-    gate.todayStats.checkIns += 1;
+    gate.todayStats.checkIns = (gate.todayStats.checkIns ?? 0) + 1;
     saveToStorage(STORAGE_KEYS.GATES, this.gates);
 
     // Audit log
@@ -297,7 +297,7 @@ class CampusGateStore {
     this.movements.unshift(movement);
     saveToStorage(STORAGE_KEYS.MOVEMENTS, this.movements);
 
-    gate.todayStats.checkOuts += 1;
+    gate.todayStats.checkOuts = (gate.todayStats.checkOuts ?? 0) + 1;
     saveToStorage(STORAGE_KEYS.GATES, this.gates);
 
     this.addAuditLog({
@@ -392,7 +392,7 @@ class CampusGateStore {
     this.movements.unshift(movement);
     saveToStorage(STORAGE_KEYS.MOVEMENTS, this.movements);
 
-    gate.todayStats.checkIns += 1;
+    gate.todayStats.checkIns = (gate.todayStats.checkIns ?? 0) + 1;
     saveToStorage(STORAGE_KEYS.GATES, this.gates);
 
     this.addAuditLog({
@@ -587,7 +587,7 @@ class CampusGateStore {
     vis.gateName = gate.name;
     vis.officerBadge = officerBadge;
 
-    gate.todayStats.visitors += 1;
+    gate.todayStats.visitors = (gate.todayStats.visitors ?? 0) + 1;
 
     saveToStorage(STORAGE_KEYS.VISITORS, this.visitors);
     saveToStorage(STORAGE_KEYS.GATES, this.gates);
@@ -657,7 +657,7 @@ class CampusGateStore {
 
     const gate = this.gates.find((g) => g.id === params.gateId);
     if (gate) {
-      gate.todayStats.incidents += 1;
+      gate.todayStats.incidents = (gate.todayStats.incidents ?? 0) + 1;
       saveToStorage(STORAGE_KEYS.GATES, this.gates);
     }
 

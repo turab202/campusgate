@@ -5,7 +5,6 @@ import {
   TrendingUp, AlertTriangle, Users, Zap, Loader2, RefreshCw, Plus
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { campusStore } from '../../services/storage';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { listDevicesApi, recoverDeviceApi, DeviceRead } from '../../services/deviceService';
 import { listMovementsApi, DeviceMovementRead } from '../../services/movementService';
