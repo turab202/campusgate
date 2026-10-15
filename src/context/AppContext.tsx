@@ -4,8 +4,8 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { translations, Language } from '../i18n/translations';
 import { Gate, GateOfficer, Student, UserRole } from '../types';
 import { campusStore } from '../services/storage';
-import { AuthUser, BackendRole, loginApi, meApi, meToAuthUser } from '../services/authService';
-import { ApiError, clearToken, getToken, setToken } from '../services/api';
+import { AuthUser, BackendRole, loginApi, logoutApi, meApi, meToAuthUser } from '../services/authService';
+import { ApiError } from '../services/api';
 import { GateAssignmentRead, getCurrentAssignmentApi, listGatesApi } from '../services/gateService';
 
 // ---------------------------------------------------------------------------
@@ -259,8 +259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ── Restore session on mount ──────────────────────────────────────────────
   useEffect(() => {
-    const token = getToken();
-    if (!token) { setIsAuthLoading(false); return; }
+    lsRemove('cg_token');
 
     meApi()
       .then((me) => {
@@ -268,7 +267,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAuthUser(user);
         applyRoleSideEffects(toFrontendRole(user.role));
       })
-      .catch(() => clearToken())
+      .catch(() => setAuthUser(null))
       .finally(() => setIsAuthLoading(false));
   }, [applyRoleSideEffects]);
 
@@ -276,8 +275,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const login = async (email: string, password: string): Promise<boolean> => {
     setAuthError(null);
     try {
-      const tokenResp = await loginApi(email, password);
-      setToken(tokenResp.access_token);
+      await loginApi(email, password);
       const me = await meApi();
       const user = meToAuthUser(me);
       setAuthUser(user);
@@ -285,6 +283,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast(`Welcome, ${user.name}`, 'success');
       return true;
     } catch (err) {
+      await logoutApi().catch(() => undefined);
       const message = err instanceof ApiError ? err.message : 'Login failed. Please try again.';
       setAuthError(message);
       showToast(message, 'error');
@@ -294,9 +293,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = () => {
-    clearToken();
     setAuthUser(null);
     lsRemove('cg_lang_manually_set');
+    void logoutApi().catch(() => undefined);
     showToast('Signed out of CampusGate', 'info');
   };
 

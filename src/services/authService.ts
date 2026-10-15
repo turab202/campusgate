@@ -1,4 +1,4 @@
-import { api } from './api';
+import { ApiError, api } from './api';
 
 // ---------------------------------------------------------------------------
 // Backend response shapes (matching FastAPI schemas)
@@ -7,8 +7,6 @@ import { api } from './api';
 export type BackendRole = 'STUDENT' | 'STAFF' | 'GATE_OFFICER' | 'ADMIN';
 
 export interface TokenResponse {
-  access_token: string;
-  token_type: string;
   user_id: string;
   role: BackendRole;
   full_name: string;
@@ -56,8 +54,35 @@ export function meToAuthUser(me: MeResponse): AuthUser {
 // API calls
 // ---------------------------------------------------------------------------
 
-export async function loginApi(email: string, password: string): Promise<TokenResponse> {
-  return api.post<TokenResponse>('/auth/login', { email, password }, false);
+export async function loginApi(email: string, password: string): Promise<void> {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ email, password }),
+  });
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+
+  if (!response.ok) {
+    const detail = body && typeof body === 'object' && 'detail' in body
+      ? body.detail
+      : 'Login failed.';
+    throw new ApiError(response.status, typeof detail === 'string' ? detail : 'Login failed.', body);
+  }
+}
+
+export async function logoutApi(): Promise<void> {
+  const response = await fetch('/api/auth/logout', {
+    method: 'POST',
+    credentials: 'same-origin',
+  });
+  if (!response.ok) throw new ApiError(response.status, 'Logout failed.');
 }
 
 export async function meApi(): Promise<MeResponse> {

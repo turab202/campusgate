@@ -36,5 +36,5 @@ export async function searchUsersApi(query: string): Promise<UserSearchResult[]>
 }
 
 export async function registerUserApi(payload: RegisterUserRequest): Promise<RegisterUserResponse> {
-  return api.post<RegisterUserResponse>('/users', payload, false);
+  return api.post<RegisterUserResponse>('/users', payload);
 }

@@ -184,7 +184,9 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 
 If you connect to a managed PostgreSQL service instead of the Docker local database, replace the URL with the correct connection string.
 
-For production, set `ENVIRONMENT=production`, use a unique randomly generated `JWT_SECRET_KEY`, and set `CORS_ORIGINS` to a JSON array containing only the deployed frontend origins. API documentation endpoints are disabled in production.
+For production, set `ENVIRONMENT=production`, use a unique randomly generated `JWT_SECRET_KEY`, and set `CORS_ORIGINS` to a JSON array containing only the deployed frontend origin. API documentation endpoints are disabled in production.
+
+Configure the frontend deployment with `BACKEND_API_URL` set to the backend origin, for example `https://campusgate-api-f27v.onrender.com` (no trailing slash). Browser API calls go through the same-origin Next.js proxy, which stores the backend JWT in an HttpOnly cookie instead of exposing it to client JavaScript. Existing browser sessions must sign in again after this change.
 
 ### 4. Create and activate a Python virtual environment
 

@@ -2,31 +2,11 @@
  * Centralized API client for CampusGate backend.
  *
  * All fetch calls go through here — no scattered fetch() in components.
- * Base URL is read from NEXT_PUBLIC_API_URL env var.
- * Bearer token is read from localStorage key 'cg_token'.
+ * Requests use the same-origin Next.js API proxy. The server-side proxy reads
+ * the HttpOnly session cookie and forwards the backend bearer token.
  */
 
-const BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000') + '/api/v1';
-const TOKEN_KEY = 'cg_token';
-
-// ---------------------------------------------------------------------------
-// Token helpers
-// ---------------------------------------------------------------------------
-
-export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(TOKEN_KEY);
-}
-
-export function setToken(token: string): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(TOKEN_KEY, token);
-}
-
-export function clearToken(): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(TOKEN_KEY);
-}
+const BASE = '/api/v1';
 
 // ---------------------------------------------------------------------------
 // Error type
@@ -64,20 +44,16 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
-  authenticated = true,
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
 
-  if (authenticated) {
-    const token = getToken();
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-  }
-
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers,
+    credentials: 'same-origin',
+    cache: 'no-store',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
@@ -107,15 +83,15 @@ async function request<T>(
 // ---------------------------------------------------------------------------
 
 export const api = {
-  get: <T>(path: string, authenticated = true) =>
-    request<T>('GET', path, undefined, authenticated),
+  get: <T>(path: string) =>
+    request<T>('GET', path),
 
-  post: <T>(path: string, body?: unknown, authenticated = true) =>
-    request<T>('POST', path, body, authenticated),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>('POST', path, body),
 
-  patch: <T>(path: string, body?: unknown, authenticated = true) =>
-    request<T>('PATCH', path, body, authenticated),
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>('PATCH', path, body),
 
-  delete: <T>(path: string, authenticated = true) =>
-    request<T>('DELETE', path, undefined, authenticated),
+  delete: <T>(path: string) =>
+    request<T>('DELETE', path),
 };
