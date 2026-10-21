@@ -112,7 +112,7 @@ export const StudentView: React.FC = () => {
 
   const statusStyle = (status: string) => {
     if (status === 'INSIDE_CAMPUS') return { badge: 'bg-[var(--cg-success-bg)] text-[var(--cg-success)] border-[var(--cg-success-border)]', dot: 'bg-[var(--cg-success)]' };
-    if (status === 'LOST') return { badge: 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]', dot: 'bg-[var(--cg-danger)]' };
+    if (status === 'LOST' || status === 'REPORTED_LOST') return { badge: 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)] border-[var(--cg-danger-border)]', dot: 'bg-[var(--cg-danger)]' };
     return { badge: 'bg-[var(--cg-info-bg)] text-[var(--cg-info)] border-[var(--cg-info-border)]', dot: 'bg-[var(--cg-info)]' };
   };
 
@@ -123,7 +123,7 @@ export const StudentView: React.FC = () => {
   ];
 
   return (
-    <div className="flex h-[calc(100vh-56px)]">
+    <div className="flex min-h-[calc(100dvh-56px)]">
 
       {/* ── Sidebar ── */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-[var(--cg-border)] bg-[var(--cg-surface)] overflow-y-auto">
@@ -133,11 +133,12 @@ export const StudentView: React.FC = () => {
           <div className="h-20 w-full" style={{ background: 'linear-gradient(135deg, #1E3A5F 0%, #2D5282 100%)' }} />
           <div className="px-5 pb-5">
             <div className="-mt-9 mb-3">
-              <img
-                src={currentStudent.avatarUrl}
-                alt={currentStudent.name}
-                className="h-16 w-16 rounded-2xl border-4 border-[var(--cg-surface)] object-cover shadow-[var(--cg-shadow-sm)]"
-              />
+              <div
+                aria-hidden="true"
+                className="flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-[var(--cg-surface)] bg-[var(--cg-primary)] text-lg font-bold text-white shadow-[var(--cg-shadow-sm)]"
+              >
+                {currentStudent.name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}
+              </div>
             </div>
             <h2 className="text-sm font-bold text-[var(--cg-text)]">{currentStudent.name}</h2>
             <p className="font-mono text-[11px] font-semibold text-[var(--cg-primary)]">{currentStudent.studentId}</p>
@@ -170,7 +171,7 @@ export const StudentView: React.FC = () => {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 border-t border-[var(--cg-border)] px-3 py-3 space-y-1">
+        <nav aria-label="Student sections" className="flex-1 border-t border-[var(--cg-border)] px-3 py-3 space-y-1">
           <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)] mb-2">Navigation</p>
           {navItems.map(({ id, label, icon: Icon, count, desc }) => {
             const isActive = activeTab === id;
@@ -178,6 +179,7 @@ export const StudentView: React.FC = () => {
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
+                aria-current={isActive ? 'page' : undefined}
                 className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
                   isActive
                     ? 'bg-[var(--cg-primary)] text-white shadow-[var(--cg-shadow-xs)]'
@@ -212,25 +214,28 @@ export const StudentView: React.FC = () => {
       </aside>
 
       {/* ── Mobile bottom nav ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-[var(--cg-border)] bg-[var(--cg-surface)] md:hidden">
-        {navItems.map(({ id, icon: Icon, count }) => (
+      <nav aria-label="Student sections" className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-[var(--cg-border)] bg-[var(--cg-surface)] pb-[env(safe-area-inset-bottom)] shadow-[var(--cg-shadow-card)] md:hidden">
+        {navItems.map(({ id, label, icon: Icon, count }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors ${
+            aria-label={label}
+            aria-current={activeTab === id ? 'page' : undefined}
+            className={`relative flex min-h-16 flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-semibold transition-colors focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[var(--cg-primary)] ${
               activeTab === id ? 'text-[var(--cg-primary)]' : 'text-[var(--cg-text-muted)]'
             }`}
           >
-            <Icon className="h-4 w-4" />
+            <Icon aria-hidden="true" className="h-5 w-5" />
+            <span>{label}</span>
             {count > 0 && (
-              <span className="absolute right-3 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--cg-primary)] text-[9px] font-bold text-white">{count}</span>
+              <span className="absolute left-1/2 top-1 flex h-4 min-w-4 translate-x-3 items-center justify-center rounded-full bg-[var(--cg-primary)] px-1 text-[9px] font-bold text-white">{count}</span>
             )}
           </button>
         ))}
-      </div>
+      </nav>
 
       {/* ── Content area ── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* Content header */}
         <div className="flex items-center justify-between border-b border-[var(--cg-border)] bg-[var(--cg-surface)] px-6 py-3.5">
           <div className="flex items-center gap-3">
@@ -247,7 +252,7 @@ export const StudentView: React.FC = () => {
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 p-4 pb-24 sm:p-6 sm:pb-24 md:pb-6">
 
           {/* DEVICES TAB */}
           {activeTab === 'DEVICES' && (

@@ -41,12 +41,12 @@ export const OfficerMain: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-2">
+          <nav aria-label="Officer tasks" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-1">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => { if (id === 'gate_enroll') setPrefilledSerial(''); setActiveTab(id); }}
-                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all ${
+                className={`flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)] ${
                   activeTab === id
                     ? 'bg-[var(--cg-primary)] text-white shadow-[var(--cg-shadow-xs)]'
                     : 'bg-[var(--cg-surface-muted)] text-[var(--cg-text-muted)] hover:text-[var(--cg-text)]'
@@ -57,7 +57,7 @@ export const OfficerMain: React.FC = () => {
                 <span>{label}</span>
               </button>
             ))}
-          </div>
+          </nav>
 
           <div className="mt-4 border-t border-[var(--cg-border)] pt-4">
             <div className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3">

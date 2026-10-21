@@ -73,7 +73,7 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
     );
   }
 
-  const isLost = device.status === 'LOST';
+  const isLost = device.status === 'LOST' || device.status === 'REPORTED_LOST';
   const isInside = device.status === 'INSIDE_CAMPUS';
   const isOutside = device.status === 'OUTSIDE_CAMPUS';
   const lastExitGateName = device.lastMovement?.gateName || 'Gate 1';

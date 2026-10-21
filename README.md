@@ -258,6 +258,8 @@ From the backend directory:
 .\.venv\Scripts\python.exe -m alembic check
 ```
 
+For a role-by-role walkthrough of the application and a safe end-to-end presentation checklist, see [PRESENTATION_E2E_GUIDE.md](./PRESENTATION_E2E_GUIDE.md).
+
 ## Current repository status
 
 This codebase currently focuses on the real device gate workflow and related operational systems:

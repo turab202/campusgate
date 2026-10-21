@@ -117,6 +117,7 @@ export const AdminDashboard: React.FC = () => {
   const totalCheckInsToday = apiMovements.filter((m) => m.movement_type === 'CHECK_IN').length;
   const totalCheckOutsToday = apiMovements.filter((m) => m.movement_type === 'CHECK_OUT').length;
   const totalIncidentsOpen = apiIncidents.filter((i) => i.status === 'OPEN').length;
+  const pendingVisits = apiVisits.filter((visit) => visit.status === 'PENDING').length;
 
   const filteredDevices = apiDevices.filter((d) => {
     if (deviceStatusFilter !== 'ALL' && d.status !== deviceStatusFilter) return false;
@@ -217,22 +218,31 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4 space-y-2">
-            {tabs.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all ${
-                  activeTab === id ? 'bg-[var(--cg-primary)] text-white shadow-[var(--cg-shadow-xs)]' : 'bg-[var(--cg-surface-muted)] text-[var(--cg-text-muted)] hover:text-[var(--cg-text)]'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
+          <nav aria-label="Administrator sections" className="mt-4 flex gap-2 overflow-x-auto pb-1 xl:flex-col xl:overflow-visible">
+            {tabs.map(({ id, label, icon: Icon }) => {
+              const count = id === 'VISITORS' ? pendingVisits : id === 'INCIDENTS' ? totalIncidentsOpen : 0;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  aria-current={activeTab === id ? 'page' : undefined}
+                  className={`flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)] xl:w-full ${
+                    activeTab === id ? 'bg-[var(--cg-primary)] text-white shadow-[var(--cg-shadow-xs)]' : 'bg-[var(--cg-surface-muted)] text-[var(--cg-text-muted)] hover:text-[var(--cg-text)]'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{label}</span>
+                  {count > 0 && (
+                    <span className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === id ? 'bg-white/20 text-white' : 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)]'}`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
 
-          <div className="mt-4 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3">
+          <div className="mt-4 hidden rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3 xl:block">
             <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">Quick status</p>
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-[11px]">

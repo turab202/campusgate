@@ -12,7 +12,7 @@ export const dictionary = {
     authorizedNotice: 'Authorized users only. Students, staff, officers, and administrators are verified before access is granted.',
     noAccount: "Don't have an account?",
     registerStudent: 'Register as Student / Staff',
-    registerTitle: 'Create Student / Staff account',
+    registerTitle: 'Create account',
     registerSubtitle: 'Complete your university profile for future access and device management.',
     fullName: 'Full name',
     department: 'Department',
