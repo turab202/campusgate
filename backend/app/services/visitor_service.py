@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.audit_log import AuditLog
 from app.models.enums import UserRole, VisitStatus
@@ -48,6 +48,14 @@ def _get_visit_locked(db: Session, visit_id: uuid.UUID) -> Visit:
     return visit
 
 
+def _load_visit_with_visitor(db: Session, visit_id: uuid.UUID) -> Visit:
+    return db.execute(
+        select(Visit)
+        .options(selectinload(Visit.visitor), selectinload(Visit.host))
+        .where(Visit.id == visit_id)
+    ).scalar_one()
+
+
 def _is_expired(visit: Visit) -> bool:
     return datetime.now(timezone.utc) > visit.expected_end_at
 
@@ -61,6 +69,11 @@ def create_visit(db: Session, body: VisitCreateRequest, actor: User) -> Visit:
     host = db.get(User, body.host_user_id)
     if host is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Host user not found")
+    if actor.role in (UserRole.STUDENT, UserRole.STAFF) and body.host_user_id != actor.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Students and staff can only request visitor passes for themselves",
+        )
     if not host.is_active:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -102,8 +115,7 @@ def create_visit(db: Session, body: VisitCreateRequest, actor: User) -> Visit:
         f"Visit request created for visitor {visitor.id} by user {actor.id}",
     )
     db.commit()
-    db.refresh(visit)
-    return visit
+    return _load_visit_with_visitor(db, visit.id)
 
 
 # ---------------------------------------------------------------------------
@@ -126,8 +138,7 @@ def approve_visit(db: Session, visit_id: uuid.UUID, actor: User) -> Visit:
     _audit(db, actor.id, "VISIT_APPROVED", str(visit.id),
            f"Visit {visit.id} approved by admin {actor.id}")
     db.commit()
-    db.refresh(visit)
-    return visit
+    return _load_visit_with_visitor(db, visit.id)
 
 
 # ---------------------------------------------------------------------------
@@ -149,15 +160,14 @@ def reject_visit(db: Session, visit_id: uuid.UUID, actor: User) -> Visit:
     _audit(db, actor.id, "VISIT_REJECTED", str(visit.id),
            f"Visit {visit.id} rejected by admin {actor.id}")
     db.commit()
-    db.refresh(visit)
-    return visit
+    return _load_visit_with_visitor(db, visit.id)
 
 
 # ---------------------------------------------------------------------------
 # Check-in
 # ---------------------------------------------------------------------------
 
-def checkin_visit(db: Session, visit_id: uuid.UUID, officer: User) -> Visit:
+def checkin_visit(db: Session, visit_id: uuid.UUID, officer: User, qr_code_value: str) -> Visit:
     visit = _get_visit_locked(db, visit_id)
 
     if visit.status == VisitStatus.APPROVED and _is_expired(visit):
@@ -174,6 +184,11 @@ def checkin_visit(db: Session, visit_id: uuid.UUID, officer: User) -> Visit:
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Visit must be APPROVED for check-in (current: {visit.status.value})",
         )
+    if visit.qr_code_value != qr_code_value:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Visitor pass QR code does not match",
+        )
 
     gate = get_active_gate(db, officer)
     now = datetime.now(timezone.utc)
@@ -186,8 +201,7 @@ def checkin_visit(db: Session, visit_id: uuid.UUID, officer: User) -> Visit:
     _audit(db, officer.id, "VISIT_CHECKED_IN", str(visit.id),
            f"Visitor checked in at gate {gate.code} by officer {officer.id}")
     db.commit()
-    db.refresh(visit)
-    return visit
+    return _load_visit_with_visitor(db, visit.id)
 
 
 # ---------------------------------------------------------------------------
@@ -213,5 +227,4 @@ def checkout_visit(db: Session, visit_id: uuid.UUID, officer: User) -> Visit:
     _audit(db, officer.id, "VISIT_CHECKED_OUT", str(visit.id),
            f"Visitor checked out at gate {gate.code} by officer {officer.id}")
     db.commit()
-    db.refresh(visit)
-    return visit
+    return _load_visit_with_visitor(db, visit.id)

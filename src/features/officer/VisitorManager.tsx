@@ -1,33 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, LogOut, LogIn, X, Loader2, RefreshCw } from 'lucide-react';
+import { Search, LogOut, LogIn, Loader2, RefreshCw, Check, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { EmptyState } from '../../components/ui/EmptyState';
 import {
-  listVisitsApi, createVisitApi, checkInVisitApi, checkOutVisitApi,
-  VisitRead, BackendVisitStatus, BackendIdentificationType
+  listVisitsApi, approveVisitApi, rejectVisitApi, checkInVisitApi, checkOutVisitApi,
+  VisitRead, BackendVisitStatus
 } from '../../services/visitService';
 import { ApiError } from '../../services/api';
 
 export const VisitorManager: React.FC = () => {
-  const { t, language, showToast } = useApp();
-  const [showAddModal, setShowAddModal] = useState(false);
+  const { t, language, showToast, role, currentGate } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
+  const [qrCodeInput, setQrCodeInput] = useState('');
   const [filterStatus, setFilterStatus] = useState<BackendVisitStatus | 'ALL'>('ALL');
-
-  // Form state
-  const [visitorName, setVisitorName] = useState('');
-  const [visitorPhone, setVisitorPhone] = useState('+251 9');
-  const [idType, setIdType] = useState<BackendIdentificationType>('NATIONAL_ID');
-  const [idNumber, setIdNumber] = useState('ETH-ID-');
-  const [purpose, setPurpose] = useState('Academic Defense Guest');
-  const [hostUserId, setHostUserId] = useState('');
-  const [expectedStart, setExpectedStart] = useState('');
-  const [expectedEnd, setExpectedEnd] = useState('');
 
   const [visits, setVisits] = useState<VisitRead[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [busyVisitId, setBusyVisitId] = useState<string | null>(null);
+  const isAdmin = role === 'ADMIN';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,57 +43,54 @@ export const VisitorManager: React.FC = () => {
         return (
           v.id.toLowerCase().includes(q) ||
           v.visitor_id.toLowerCase().includes(q) ||
-          v.host_user_id.toLowerCase().includes(q)
+          v.host_user_id.toLowerCase().includes(q) ||
+          v.host.full_name.toLowerCase().includes(q) ||
+          v.host.email.toLowerCase().includes(q) ||
+          v.visitor.full_name.toLowerCase().includes(q) ||
+          v.visitor.identification_number.toLowerCase().includes(q) ||
+          (v.qr_code_value ?? '').toLowerCase().includes(q)
         );
       })
     : visits;
 
-  const handleCreatePass = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!visitorName.trim() || !hostUserId.trim() || !expectedStart || !expectedEnd) return;
-    setSubmitting(true);
+  const handleReview = async (id: string, approve: boolean) => {
+    setBusyVisitId(id);
     try {
-      await createVisitApi({
-        visitor: {
-          full_name: visitorName,
-          phone: visitorPhone || undefined,
-          identification_type: idType,
-          identification_number: idNumber,
-          purpose,
-        },
-        host_user_id: hostUserId,
-        expected_start_at: new Date(expectedStart).toISOString(),
-        expected_end_at: new Date(expectedEnd).toISOString(),
-      });
-      showToast(`Visitor pass created for ${visitorName}`, 'success');
-      setShowAddModal(false);
-      setVisitorName('');
+      if (approve) await approveVisitApi(id);
+      else await rejectVisitApi(id);
+      showToast(`Visitor request ${approve ? 'approved' : 'rejected'}.`, 'success');
       load();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Failed to create visitor pass.';
-      showToast(message, 'error');
+      showToast(err instanceof ApiError ? err.message : 'Failed to review visitor request.', 'error');
     } finally {
-      setSubmitting(false);
+      setBusyVisitId(null);
     }
   };
 
-  const handleCheckIn = async (id: string) => {
+  const handleCheckIn = async (id: string, qrCodeValue: string) => {
+    setBusyVisitId(id);
     try {
-      await checkInVisitApi(id);
+      await checkInVisitApi(id, qrCodeValue);
+      setQrCodeInput('');
       showToast('Visitor checked in successfully.', 'success');
       load();
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Check-in failed.', 'error');
+    } finally {
+      setBusyVisitId(null);
     }
   };
 
   const handleCheckOut = async (id: string) => {
+    setBusyVisitId(id);
     try {
       await checkOutVisitApi(id);
       showToast('Visitor checked out successfully.', 'success');
       load();
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Check-out failed.', 'error');
+    } finally {
+      setBusyVisitId(null);
     }
   };
 
@@ -135,19 +123,17 @@ export const VisitorManager: React.FC = () => {
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--cg-primary)] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            {t('newVisitorRequest')}
-          </button>
+          <span className="text-xs text-[var(--cg-text-muted)]">
+            {isAdmin
+              ? 'Review student and staff requests.'
+              : currentGate.id ? `Active gate: ${currentGate.name}` : 'An active gate assignment is required.'}
+          </span>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        {(['ALL', 'PENDING', 'APPROVED', 'CHECKED_IN', 'CHECKED_OUT'] as const).map((s) => (
+        {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CHECKED_IN', 'CHECKED_OUT', 'EXPIRED'] as const).map((s) => (
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
@@ -168,10 +154,24 @@ export const VisitorManager: React.FC = () => {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by visit ID, visitor ID, or host ID…"
+          placeholder="Search by visitor, host, identification, visit ID, or pass code…"
           className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] pl-10 pr-4 text-xs text-[var(--cg-text)] focus:border-[var(--cg-primary)] focus:outline-none"
         />
       </div>
+
+      {!isAdmin && (
+        <label className="block space-y-1.5 text-xs font-semibold text-[var(--cg-text-muted)]">
+          Scan approved visitor pass QR code
+          <input
+            type="text"
+            value={qrCodeInput}
+            onChange={(event) => setQrCodeInput(event.target.value.trim())}
+            placeholder="Scan or enter the visitor pass code"
+            autoComplete="off"
+            className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 font-mono text-sm text-[var(--cg-text)] focus:border-[var(--cg-primary)] focus:outline-none"
+          />
+        </label>
+      )}
 
       {error && (
         <div className="rounded-xl border border-[var(--cg-danger-border)] bg-[var(--cg-danger-bg)] p-4 text-sm text-[var(--cg-danger)]">
@@ -199,17 +199,33 @@ export const VisitorManager: React.FC = () => {
                 </div>
                 <div className="mt-3 space-y-1.5 text-xs">
                   <div className="rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2">
-                    <span className="block text-[10px] font-semibold uppercase text-[var(--cg-text-muted)]">Visitor ID</span>
-                    <span className="font-mono text-[var(--cg-text)]">{vis.visitor_id.slice(0, 8)}…</span>
+                    <span className="block text-[10px] font-semibold uppercase text-[var(--cg-text-muted)]">Visitor identity</span>
+                    <span className="font-semibold text-[var(--cg-text)]">{vis.visitor.full_name}</span>
+                    <span className="block font-mono text-[var(--cg-text-muted)]">
+                      {vis.visitor.identification_type.replace(/_/g, ' ')} · {vis.visitor.identification_number}
+                    </span>
                   </div>
                   <div className="rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2">
-                    <span className="block text-[10px] font-semibold uppercase text-[var(--cg-text-muted)]">Host User ID</span>
-                    <span className="font-mono text-[var(--cg-text)]">{vis.host_user_id.slice(0, 8)}…</span>
+                    <span className="block text-[10px] font-semibold uppercase text-[var(--cg-text-muted)]">Purpose</span>
+                    <span className="text-[var(--cg-text)]">{vis.visitor.purpose || 'Not specified'}</span>
+                  </div>
+                  <div className="rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2">
+                    <span className="block text-[10px] font-semibold uppercase text-[var(--cg-text-muted)]">Host</span>
+                    <span className="font-semibold text-[var(--cg-text)]">{vis.host.full_name}</span>
+                    <span className="block text-[var(--cg-text-muted)]">{vis.host.email}</span>
                   </div>
                   <div className="flex justify-between text-[var(--cg-text-muted)]">
                     <span>Expected:</span>
-                    <span className="font-semibold text-[var(--cg-text)]">{new Date(vis.expected_start_at).toLocaleDateString()}</span>
+                    <span className="text-right font-semibold text-[var(--cg-text)]">
+                      {new Date(vis.expected_start_at).toLocaleString()} – {new Date(vis.expected_end_at).toLocaleTimeString()}
+                    </span>
                   </div>
+                  {vis.qr_code_value && (
+                    <div className="rounded-lg border border-[var(--cg-success-border)] bg-[var(--cg-success-bg)] p-2">
+                      <span className="block text-[10px] font-semibold uppercase text-[var(--cg-success)]">Approved pass</span>
+                      <span className="font-mono font-semibold text-[var(--cg-text)]">{vis.qr_code_value}</span>
+                    </div>
+                  )}
                   {vis.checked_in_at && (
                     <div className="flex justify-between text-[var(--cg-text-muted)]">
                       <span>Checked in:</span>
@@ -225,18 +241,32 @@ export const VisitorManager: React.FC = () => {
                 </div>
               </div>
               <div className="mt-4 border-t border-[var(--cg-border)] pt-3">
-                {vis.status === 'APPROVED' && (
-                  <button onClick={() => handleCheckIn(vis.id)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--cg-success)] py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity">
-                    <LogIn className="h-3.5 w-3.5" /> {t('checkInVisitor')}
+                {isAdmin && vis.status === 'PENDING' && (
+                  <div className="flex gap-2">
+                    <button onClick={() => handleReview(vis.id, true)} disabled={busyVisitId === vis.id}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--cg-success)] py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60">
+                      <Check className="h-3.5 w-3.5" /> Approve
+                    </button>
+                    <button onClick={() => handleReview(vis.id, false)} disabled={busyVisitId === vis.id}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--cg-danger)] py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60">
+                      <X className="h-3.5 w-3.5" /> Reject
+                    </button>
+                  </div>
+                )}
+                {!isAdmin && vis.status === 'APPROVED' && (
+                  <button onClick={() => handleCheckIn(vis.id, qrCodeInput)} disabled={!currentGate.id || busyVisitId === vis.id || qrCodeInput !== vis.qr_code_value}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--cg-success)] py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-60">
+                    <LogIn className="h-3.5 w-3.5" />
+                    {qrCodeInput === vis.qr_code_value ? t('checkInVisitor') : 'Scan this visitor’s QR to check in'}
                   </button>
                 )}
-                {vis.status === 'CHECKED_IN' && (
-                  <button onClick={() => handleCheckOut(vis.id)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--cg-primary)] py-2 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
+                {!isAdmin && vis.status === 'CHECKED_IN' && (
+                  <button onClick={() => handleCheckOut(vis.id)} disabled={!currentGate.id || busyVisitId === vis.id}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--cg-primary)] py-2 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors disabled:opacity-60">
                     <LogOut className="h-3.5 w-3.5" /> {t('checkOutVisitor')}
                   </button>
                 )}
+                {busyVisitId === vis.id && <p className="mt-2 text-center text-xs text-[var(--cg-text-muted)]">Updating…</p>}
                 {vis.status === 'CHECKED_OUT' && (
                   <div className="rounded-lg bg-[var(--cg-surface-muted)] py-1.5 text-center text-xs text-[var(--cg-text-muted)]">
                     Departed
@@ -248,82 +278,6 @@ export const VisitorManager: React.FC = () => {
         </div>
       )}
 
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-[var(--cg-border)] bg-[var(--cg-primary)] px-5 py-4">
-              <h3 className="font-semibold text-white">{t('newVisitorRequest')}</h3>
-              <button onClick={() => setShowAddModal(false)} aria-label="Close" className="text-white/70 hover:text-white">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={handleCreatePass} className="p-5 space-y-4 text-xs">
-              <div className="space-y-1.5">
-                <label className="block font-semibold text-[var(--cg-text)]">{t('visitorName')} *</label>
-                <input required value={visitorName} onChange={(e) => setVisitorName(e.target.value)}
-                  placeholder="e.g. Dr. Dawit Mengesha"
-                  className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="block font-semibold text-[var(--cg-text)]">{t('visitorPhone')}</label>
-                  <input value={visitorPhone} onChange={(e) => setVisitorPhone(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 font-mono text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block font-semibold text-[var(--cg-text)]">ID Type</label>
-                  <select value={idType} onChange={(e) => setIdType(e.target.value as BackendIdentificationType)}
-                    className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]">
-                    <option value="NATIONAL_ID">National ID</option>
-                    <option value="PASSPORT">Passport</option>
-                    <option value="DRIVER_LICENSE">Driver License</option>
-                    <option value="OTHER">Other</option>
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="block font-semibold text-[var(--cg-text)]">{t('nationalId')} *</label>
-                <input required value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 font-mono text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block font-semibold text-[var(--cg-text)]">{t('purpose')}</label>
-                <input value={purpose} onChange={(e) => setPurpose(e.target.value)}
-                  placeholder="e.g. Senior Project External Evaluation"
-                  className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block font-semibold text-[var(--cg-text)]">Host User ID (UUID) *</label>
-                <input required value={hostUserId} onChange={(e) => setHostUserId(e.target.value)}
-                  placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
-                  className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 font-mono text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="block font-semibold text-[var(--cg-text)]">Expected Start *</label>
-                  <input required type="datetime-local" value={expectedStart} onChange={(e) => setExpectedStart(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block font-semibold text-[var(--cg-text)]">Expected End *</label>
-                  <input required type="datetime-local" value={expectedEnd} onChange={(e) => setExpectedEnd(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-2 border-t border-[var(--cg-border)] pt-3">
-                <button type="button" onClick={() => setShowAddModal(false)}
-                  className="rounded-lg px-4 py-2 text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">
-                  {t('cancel')}
-                </button>
-                <button type="submit" disabled={submitting}
-                  className="rounded-lg bg-[var(--cg-primary)] px-5 py-2.5 font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors disabled:opacity-60">
-                  {submitting ? 'Creating…' : 'Create Visit Request'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -540,6 +540,7 @@ def test_incident_list_empty(db):
 def test_incident_create_officer(db):
     officer = _user(db, "ic_off", role=UserRole.GATE_OFFICER)
     gate = _gate(db, "ic_off")
+    _assignment(db, officer, gate)
     owner = _user(db, "ic_own")
     dev = _device(db, owner, "IC01")
     resp = client.post("/api/v1/incidents", json={
@@ -553,6 +554,7 @@ def test_incident_create_officer(db):
     data = resp.json()
     assert data["incident_type"] == "OWNER_MISMATCH"
     assert data["status"] == "OPEN"
+    assert data["gate_id"] == str(gate.id)
     # reported_by must be the authenticated officer, not a spoofed value
     assert data["reported_by"] == str(officer.id)
 
@@ -566,6 +568,25 @@ def test_incident_create_admin(db):
         "description": "Admin-created incident",
     }, headers=_token(admin))
     assert resp.status_code == 201
+
+
+def test_incident_create_officer_requires_active_assignment(db):
+    officer = _user(db, "ic_noasgn", role=UserRole.GATE_OFFICER)
+    resp = client.post("/api/v1/incidents", json={
+        "incident_type": "OTHER",
+        "description": "Incident without assigned gate",
+    }, headers=_token(officer))
+    assert resp.status_code == 403
+
+
+def test_incident_create_rejects_missing_device(db):
+    admin = _user(db, "ic_missing_device_admin", role=UserRole.ADMIN)
+    resp = client.post("/api/v1/incidents", json={
+        "device_id": str(uuid.uuid4()),
+        "incident_type": "OTHER",
+        "description": "Unknown device",
+    }, headers=_token(admin))
+    assert resp.status_code == 404
 
 
 def test_incident_create_student_forbidden(db):
@@ -590,9 +611,12 @@ def test_incident_create_invalid_device_uuid(db):
 def test_incident_create_reported_by_overridden(db):
     """reported_by in body must be ignored — actor.id is always used."""
     officer = _user(db, "ic_spoof_off", role=UserRole.GATE_OFFICER)
+    gate = _gate(db, "ic_spoof")
+    _assignment(db, officer, gate)
     other = _user(db, "ic_spoof_other")
     resp = client.post("/api/v1/incidents", json={
         "reported_by": str(other.id),
+        "gate_id": str(gate.id),
         "incident_type": "OTHER",
         "description": "Spoofed reporter",
     }, headers=_token(officer))
@@ -621,10 +645,40 @@ def test_visit_list_admin(db):
     assert resp.status_code == 200
 
 
-def test_visit_list_student_forbidden(db):
+def test_visit_list_student_only_sees_own_visits(db):
     student = _user(db, "vl_st")
+    other_host = _user(db, "vl_st_other")
+    own_visit = _visit(db, student)
+    other_visit = _visit(db, other_host)
     resp = client.get("/api/v1/visits", headers=_token(student))
-    assert resp.status_code == 403
+    assert resp.status_code == 200
+    visits = resp.json()
+    assert [visit["id"] for visit in visits] == [str(own_visit.id)]
+    assert visits[0]["visitor"]["full_name"]
+    assert visits[0]["host"]["id"] == str(student.id)
+    assert visits[0]["host"]["full_name"] == student.full_name
+    assert visits[0]["visitor_id"] == str(own_visit.visitor_id)
+    assert str(other_visit.id) not in {visit["id"] for visit in visits}
+
+
+def test_student_cannot_read_another_hosts_visit(db):
+    student = _user(db, "vl_get_st")
+    other_host = _user(db, "vl_get_other")
+    visit = _visit(db, other_host)
+
+    resp = client.get(f"/api/v1/visits/{visit.id}", headers=_token(student))
+
+    assert resp.status_code == 404
+
+
+def test_student_can_read_own_visit(db):
+    student = _user(db, "vl_get_own")
+    visit = _visit(db, student)
+
+    resp = client.get(f"/api/v1/visits/{visit.id}", headers=_token(student))
+
+    assert resp.status_code == 200
+    assert resp.json()["visitor"]["id"] == str(visit.visitor_id)
 
 
 def test_visit_list_filter_by_status(db):

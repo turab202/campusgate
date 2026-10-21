@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Laptop, QrCode, AlertTriangle, Plus,
-  ArrowUpRight, ArrowDownLeft, MapPin, X,
-  Package, Clock, TrendingUp, Shield,
+  QrCode, AlertTriangle,
+  ArrowUpRight, ArrowDownLeft, MapPin,
+  Package, Clock, TrendingUp, Shield, Users,
   Loader2, GraduationCap
 } from 'lucide-react';
 import { Device } from '../../types';
@@ -12,6 +12,7 @@ import { QRPassModal } from '../../components/QRPassModal';
 import { listDevicesApi, reportLostApi, DeviceRead } from '../../services/deviceService';
 import { getDeviceMovementsApi, DeviceMovementRead } from '../../services/movementService';
 import { ApiError } from '../../services/api';
+import { VisitorRequests } from './VisitorRequests';
 
 /** Map backend DeviceRead to the frontend Device shape used by QRPassModal. */
 function toFrontendDevice(d: DeviceRead): Device {
@@ -36,7 +37,7 @@ function toFrontendDevice(d: DeviceRead): Device {
 
 export const StudentView: React.FC = () => {
   const { t, language, currentStudent, authUser, showToast } = useApp();
-  const [activeTab, setActiveTab] = useState<'DEVICES' | 'HISTORY'>('DEVICES');
+  const [activeTab, setActiveTab] = useState<'DEVICES' | 'HISTORY' | 'VISITORS'>('DEVICES');
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<Device | null>(null);
   const [deviceToReportLost, setDeviceToReportLost] = useState<Device | null>(null);
 
@@ -118,6 +119,7 @@ export const StudentView: React.FC = () => {
   const navItems = [
     { id: 'DEVICES' as const, label: t('navMyDevices'), icon: Package, count: devices.length, desc: 'Enrolled devices' },
     { id: 'HISTORY' as const, label: t('navHistory'), icon: Clock, count: apiMovements.length, desc: 'Movement timeline' },
+    { id: 'VISITORS' as const, label: 'Visitors', icon: Users, count: 0, desc: 'Visitor pass requests' },
   ];
 
   return (
@@ -370,6 +372,8 @@ export const StudentView: React.FC = () => {
               )}
             </div>
           )}
+
+          {activeTab === 'VISITORS' && <VisitorRequests />}
 
         </div>
       </div>

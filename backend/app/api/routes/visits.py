@@ -4,14 +4,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.enums import UserRole, VisitStatus
 from app.models.user import User
 from app.models.visit import Visit
-from app.schemas.visitor import VisitActionRequest, VisitCreateRequest, VisitRead
+from app.schemas.visitor import VisitActionRequest, VisitCheckinRequest, VisitCreateRequest, VisitRead
 from app.services.visitor_service import (
     approve_visit,
     checkin_visit,
@@ -56,13 +56,17 @@ def list_visits(
     visitor_id: uuid.UUID | None = Query(None),
     on_date: date | None = Query(None, description="Filter by expected_start_at date (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
-    actor: User = Depends(_require_officer_or_admin),
+    actor: User = Depends(get_current_user),
 ):
     """
-    GATE_OFFICER and ADMIN can list visits.
+    GATE_OFFICER and ADMIN can list all visits.
+    STUDENT and STAFF can list only visits they host.
     Supports filtering by status, host, visitor, and date.
     """
-    q = select(Visit)
+    q = select(Visit).options(selectinload(Visit.visitor), selectinload(Visit.host))
+
+    if actor.role in (UserRole.STUDENT, UserRole.STAFF):
+        q = q.where(Visit.host_user_id == actor.id)
 
     if visit_status is not None:
         q = q.where(Visit.status == visit_status)
@@ -92,10 +96,16 @@ def create(
 def get_visit(
     visit_id: uuid.UUID,
     db: Annotated[Session, Depends(get_db)],
-    _: Annotated[User, Depends(get_current_user)],
+    actor: Annotated[User, Depends(get_current_user)],
 ):
-    visit = db.get(Visit, visit_id)
+    visit = db.execute(
+        select(Visit)
+        .options(selectinload(Visit.visitor), selectinload(Visit.host))
+        .where(Visit.id == visit_id)
+    ).scalar_one_or_none()
     if visit is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found")
+    if actor.role in (UserRole.STUDENT, UserRole.STAFF) and visit.host_user_id != actor.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found")
     return visit
 
@@ -123,9 +133,9 @@ def check_in(
     visit_id: uuid.UUID,
     db: Annotated[Session, Depends(get_db)],
     officer: Annotated[User, Depends(_require_officer)],
-    body: VisitActionRequest = Body(default=VisitActionRequest()),
+    body: VisitCheckinRequest,
 ):
-    return checkin_visit(db, visit_id, officer)
+    return checkin_visit(db, visit_id, officer, body.qr_code_value)
 
 
 @router.post("/{visit_id}/check-out", response_model=VisitRead)

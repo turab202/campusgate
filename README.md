@@ -106,15 +106,17 @@ PostgreSQL database
 
 ### Visitor management
 
-- Visitor and visit records
-- Pending, approved, checked-in, checked-out, rejected, and expiry flows
-- Gate officer and admin handling through the existing API layer
+- Students and staff submit visitor requests for their own accounts.
+- Administrators approve or reject pending requests; approval generates a visitor QR pass.
+- Gate officers verify the approved QR value at their assigned gate before check-in, then record check-out.
+- Hosts can review their requests and show approved visitor passes from the student portal.
+- Requests, approvals, and gate movements are audit logged; hosts can only view their own requests.
 
 ### Incident management
 
-- Incident lifecycle tracking
-- Device and owner details visible in the UI
-- Status visibility and administrative handling
+- Gate officers create incidents associated with their active gate and, when applicable, a registered device.
+- Administrators review incidents and advance them through OPEN, INVESTIGATING, RESOLVED, and CLOSED.
+- Incident creation and status changes are audit logged.
 
 ### Audit logs
 
@@ -288,4 +290,3 @@ CampusGate is intended to provide an enterprise-style digital gate process that:
 - keeps gate operations fast and verifiable
 
 > The goal is operational integrity and traceability, not feature sprawl.
-

@@ -17,6 +17,21 @@ export type BackendIdentificationType =
 
 export interface VisitRead {
   id: string;
+  visitor: {
+    id: string;
+    full_name: string;
+    phone: string | null;
+    identification_type: BackendIdentificationType;
+    identification_number: string;
+    organization: string | null;
+    purpose: string | null;
+  };
+  host: {
+    id: string;
+    full_name: string;
+    email: string;
+    campus_id: string | null;
+  };
   visitor_id: string;
   host_user_id: string;
   checkin_gate_id: string | null;
@@ -76,8 +91,8 @@ export async function rejectVisitApi(visitId: string): Promise<VisitRead> {
   return api.post<VisitRead>(`/visits/${visitId}/reject`);
 }
 
-export async function checkInVisitApi(visitId: string): Promise<VisitRead> {
-  return api.post<VisitRead>(`/visits/${visitId}/check-in`, {});
+export async function checkInVisitApi(visitId: string, qrCodeValue: string): Promise<VisitRead> {
+  return api.post<VisitRead>(`/visits/${visitId}/check-in`, { qr_code_value: qrCodeValue });
 }
 
 export async function checkOutVisitApi(visitId: string): Promise<VisitRead> {

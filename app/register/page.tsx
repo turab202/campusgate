@@ -111,7 +111,7 @@ export default function RegisterPage() {
     >
       {submitError ? <Alert variant="danger" className="mb-4">{submitError}</Alert> : null}
 
-      <form className="mt-4 space-y-3" onSubmit={handleSubmit} noValidate>
+      <form className="mt-3 space-y-2.5" onSubmit={handleSubmit} noValidate>
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label={t.fullName} error={errors.name}>
             <Input id="full-name" type="text" autoComplete="name"
@@ -144,16 +144,17 @@ export default function RegisterPage() {
           </FormField>
         </div>
 
-        <FormField label={t.phone}>
-          <Input id="phone" type="tel" autoComplete="tel" placeholder="+251 91 000 0000"
-            value={form.phone} onChange={(e) => field('phone', e.target.value)} disabled={submitting} />
-        </FormField>
-
-        <FormField label={locale === 'am' ? 'የዩኒቨርሲቲ ኢሜይል' : 'University Email'} error={errors.email}>
-          <Input id="email" type="email" autoComplete="email"
-            placeholder={locale === 'am' ? 'ስምዎ@astu.edu.et' : 'yourname@astu.edu.et'}
-            value={form.email} onChange={(e) => field('email', e.target.value)} disabled={submitting} />
-        </FormField>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label={t.phone}>
+            <Input id="phone" type="tel" autoComplete="tel" placeholder="+251 91 000 0000"
+              value={form.phone} onChange={(e) => field('phone', e.target.value)} disabled={submitting} />
+          </FormField>
+          <FormField label={locale === 'am' ? 'የዩኒቨርሲቲ ኢሜይል' : 'University Email'} error={errors.email}>
+            <Input id="email" type="email" autoComplete="email"
+              placeholder={locale === 'am' ? 'ስምዎ@astu.edu.et' : 'yourname@astu.edu.et'}
+              value={form.email} onChange={(e) => field('email', e.target.value)} disabled={submitting} />
+          </FormField>
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label={t.password} error={errors.password}>

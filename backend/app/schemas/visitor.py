@@ -33,6 +33,15 @@ class VisitorRead(BaseModel):
     updated_at: datetime
 
 
+class VisitHostRead(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    full_name: str
+    email: str
+    campus_id: str | None
+
+
 # ---------------------------------------------------------------------------
 # Visit
 # ---------------------------------------------------------------------------
@@ -55,6 +64,8 @@ class VisitRead(BaseModel):
     model_config = {"from_attributes": True}
 
     id: uuid.UUID
+    visitor: VisitorRead
+    host: VisitHostRead
     visitor_id: uuid.UUID
     host_user_id: uuid.UUID
     checkin_gate_id: uuid.UUID | None
@@ -72,3 +83,7 @@ class VisitRead(BaseModel):
 class VisitActionRequest(BaseModel):
     """Optional notes for approve/reject/check-in/check-out actions."""
     notes: str | None = None
+
+
+class VisitCheckinRequest(BaseModel):
+    qr_code_value: str

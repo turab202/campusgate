@@ -116,9 +116,18 @@ def _visit_payload(host_id: uuid.UUID, *, start_offset: int = 0, end_offset: int
 
 
 def _create_visit(db, actor: User, host: User, **kwargs) -> dict:
-    payload = _visit_payload(host.id, **kwargs)
+    host_id = actor.id if actor.role in (UserRole.STUDENT, UserRole.STAFF) else host.id
+    payload = _visit_payload(host_id, **kwargs)
     resp = client.post("/api/v1/visits", json=payload, headers=_token(actor))
     return resp
+
+
+def _check_in(visit_id, actor: User, qr_code_value: str | None = None):
+    return client.post(
+        f"/api/v1/visits/{visit_id}/check-in",
+        json={"qr_code_value": qr_code_value or "INVALID-QR"},
+        headers=_token(actor),
+    )
 
 
 def _make_approved_visit(db, actor: User, host: User, **kwargs) -> Visit:
@@ -146,6 +155,8 @@ def test_student_can_create_visit(db):
     assert resp.status_code == 201
     data = resp.json()
     assert data["status"] == "PENDING"
+    assert data["host_user_id"] == str(student.id)
+    assert data["visitor"]["full_name"]
     assert data["qr_code_value"] is None  # QR only generated on approval
 
 
@@ -178,10 +189,23 @@ def test_invalid_host_rejected(db):
 
 
 def test_inactive_host_rejected(db):
-    student = _user(db, "vc_inact")
+    admin = _user(db, "vc_inact_admin", role=UserRole.ADMIN)
     inactive_host = _user(db, "vc_inact_host", active=False)
-    resp = _create_visit(db, student, inactive_host)
+    resp = _create_visit(db, admin, inactive_host)
     assert resp.status_code == 422
+
+
+def test_student_cannot_create_visit_for_another_host(db):
+    student = _user(db, "vc_other_student")
+    other_host = _user(db, "vc_other_host")
+
+    resp = client.post(
+        "/api/v1/visits",
+        json=_visit_payload(other_host.id),
+        headers=_token(student),
+    )
+
+    assert resp.status_code == 403
 
 
 def test_invalid_time_range_rejected(db):
@@ -330,7 +354,7 @@ def test_valid_checkin(db):
     host = _user(db, "ci_host")
     visit = _make_approved_visit(db, student, host)
 
-    resp = client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(officer))
+    resp = _check_in(visit.id, officer, visit.qr_code_value)
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "CHECKED_IN"
@@ -338,12 +362,27 @@ def test_valid_checkin(db):
     assert data["checkin_gate_id"] == str(gate.id)
 
 
+def test_checkin_requires_matching_approved_qr(db):
+    officer = _user(db, "ci_badqr_off", role=UserRole.GATE_OFFICER)
+    gate = _gate(db, "ci_badqr")
+    _assignment(db, officer, gate)
+    student = _user(db, "ci_badqr_st")
+    visit = _make_approved_visit(db, student, student)
+
+    resp = _check_in(visit.id, officer, "CG-VISIT-WRONG")
+
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "Visitor pass QR code does not match"
+    db.refresh(visit)
+    assert visit.status == VisitStatus.APPROVED
+
+
 def test_checkin_non_officer_rejected(db):
     student = _user(db, "ci_nooff")
     host = _user(db, "ci_nooff_host")
     visit = _make_approved_visit(db, student, host)
 
-    resp = client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(student))
+    resp = _check_in(visit.id, student, visit.qr_code_value)
     assert resp.status_code == 403
 
 
@@ -353,7 +392,7 @@ def test_checkin_no_assignment_rejected(db):
     host = _user(db, "ci_noasgn_host")
     visit = _make_approved_visit(db, student, host)
 
-    resp = client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(officer))
+    resp = _check_in(visit.id, officer, visit.qr_code_value)
     assert resp.status_code == 403
 
 
@@ -366,7 +405,7 @@ def test_checkin_expired_visit_rejected(db):
     # Create visit that is already expired (end in the past)
     visit = _make_approved_visit(db, student, host, start_offset=-120, end_offset=-60)
 
-    resp = client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(officer))
+    resp = _check_in(visit.id, officer, visit.qr_code_value)
     assert resp.status_code == 422
 
 
@@ -382,7 +421,7 @@ def test_checkin_rejected_visit_rejected(db):
     visit_id = resp.json()["id"]
     client.post(f"/api/v1/visits/{visit_id}/reject", headers=_token(admin))
 
-    resp2 = client.post(f"/api/v1/visits/{visit_id}/check-in", headers=_token(officer))
+    resp2 = _check_in(visit_id, officer)
     assert resp2.status_code == 422
 
 
@@ -396,7 +435,7 @@ def test_checkin_pending_visit_rejected(db):
     resp = _create_visit(db, student, host)
     visit_id = resp.json()["id"]
 
-    resp2 = client.post(f"/api/v1/visits/{visit_id}/check-in", headers=_token(officer))
+    resp2 = _check_in(visit_id, officer)
     assert resp2.status_code == 422
 
 
@@ -408,7 +447,7 @@ def test_checkin_correct_gate_recorded(db):
     host = _user(db, "ci_gate_host")
     visit = _make_approved_visit(db, student, host)
 
-    resp = client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(officer))
+    resp = _check_in(visit.id, officer, visit.qr_code_value)
     assert resp.status_code == 200
     assert resp.json()["checkin_gate_id"] == str(gate.id)
 
@@ -421,7 +460,7 @@ def test_checkin_audit_created(db):
     host = _user(db, "ci_aud_host")
     visit = _make_approved_visit(db, student, host)
 
-    client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(officer))
+    _check_in(visit.id, officer, visit.qr_code_value)
 
     log = db.query(AuditLog).filter(
         AuditLog.action == "VISIT_CHECKED_IN",
@@ -442,7 +481,7 @@ def test_valid_checkout(db):
     host = _user(db, "co_host")
     visit = _make_approved_visit(db, student, host)
 
-    client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(officer))
+    _check_in(visit.id, officer, visit.qr_code_value)
     resp = client.post(f"/api/v1/visits/{visit.id}/check-out", headers=_token(officer))
     assert resp.status_code == 200
     data = resp.json()
@@ -497,7 +536,7 @@ def test_checkout_already_checkedout_rejected(db):
     host = _user(db, "co_dup_host")
     visit = _make_approved_visit(db, student, host)
 
-    client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(officer))
+    _check_in(visit.id, officer, visit.qr_code_value)
     client.post(f"/api/v1/visits/{visit.id}/check-out", headers=_token(officer))
     resp = client.post(f"/api/v1/visits/{visit.id}/check-out", headers=_token(officer))
     assert resp.status_code == 422
@@ -511,7 +550,7 @@ def test_checkout_audit_created(db):
     host = _user(db, "co_aud_host")
     visit = _make_approved_visit(db, student, host)
 
-    client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(officer))
+    _check_in(visit.id, officer, visit.qr_code_value)
     client.post(f"/api/v1/visits/{visit.id}/check-out", headers=_token(officer))
 
     log = db.query(AuditLog).filter(
@@ -537,7 +576,7 @@ def test_cross_gate_checkin_checkout(db):
     host = _user(db, "xg_host")
     visit = _make_approved_visit(db, student, host)
 
-    resp_in = client.post(f"/api/v1/visits/{visit.id}/check-in", headers=_token(officer_a))
+    resp_in = _check_in(visit.id, officer_a, visit.qr_code_value)
     assert resp_in.status_code == 200
     assert resp_in.json()["checkin_gate_id"] == str(gate1.id)
 
@@ -621,7 +660,7 @@ def test_failed_checkin_does_not_change_status(db):
     resp = _create_visit(db, student, host)
     visit_id = resp.json()["id"]
 
-    client.post(f"/api/v1/visits/{visit_id}/check-in", headers=_token(officer))  # 422
+    _check_in(visit_id, officer)  # 422
 
     visit = db.get(Visit, uuid.UUID(visit_id))
     db.refresh(visit)

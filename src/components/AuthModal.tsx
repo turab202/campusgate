@@ -11,7 +11,7 @@ export const AuthModal: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
@@ -20,7 +20,7 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
-    const success = login(identifier.trim(), password.trim());
+    const success = await login(identifier.trim(), password.trim());
     if (!success) {
       setErrorMsg(t('invalidCredentials'));
     }
