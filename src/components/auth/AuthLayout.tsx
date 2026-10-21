@@ -10,6 +10,7 @@ interface AuthLayoutProps {
   subtitle: string;
   footer?: React.ReactNode;
   rightPanel?: React.ReactNode;
+  fitViewport?: boolean;
 }
 
 const features = [
@@ -18,16 +19,16 @@ const features = [
   { icon: Users, label: 'Cross-Gate Sync', desc: 'One database shared by every station' },
 ];
 
-export function AuthLayout({ locale, children, title, subtitle, footer, rightPanel }: AuthLayoutProps) {
+export function AuthLayout({ locale, children, title, subtitle, footer, rightPanel, fitViewport = false }: AuthLayoutProps) {
   const copy = dictionary[locale];
 
   return (
-    <div className="min-h-screen bg-[var(--cg-background)] text-[var(--cg-text)]">
-      <div className="mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row">
+    <div className={`min-h-screen bg-[var(--cg-background)] text-[var(--cg-text)] ${fitViewport ? 'auth-layout-fit' : ''}`}>
+      <div className={`mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row ${fitViewport ? 'auth-layout-fit__row' : ''}`}>
 
         {/* ── Left branding panel ── */}
         <div
-          className="relative hidden lg:flex lg:w-[44%] lg:flex-none flex-col lg:sticky lg:top-0 lg:min-h-screen overflow-hidden"
+          className={`relative hidden lg:flex lg:w-[44%] lg:flex-none flex-col lg:sticky lg:top-0 lg:min-h-screen overflow-hidden ${fitViewport ? 'auth-layout-fit__brand' : ''}`}
           style={{ background: 'linear-gradient(145deg, #0F2340 0%, #1E3A5F 45%, #2D5282 100%)' }}
         >
           {/* Decorative circles */}
@@ -37,7 +38,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full opacity-5" style={{ background: 'radial-gradient(circle, #BFDBFE, transparent)' }} />
           </div>
 
-          <div className="relative z-10 flex min-h-screen flex-col px-10 py-10 xl:px-14">
+          <div className={`relative z-10 flex min-h-screen flex-col px-10 py-10 xl:px-14 ${fitViewport ? 'auth-layout-fit__brand-content lg:px-8 lg:py-7 xl:px-12' : ''}`}>
             {/* Logo */}
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm border border-white/20">
@@ -50,15 +51,15 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             </div>
 
             {/* Main content */}
-            <div className="flex flex-col justify-start pt-[clamp(1.5rem,6vh,3rem)]">
+            <div className={`flex flex-col justify-start pt-[clamp(1.5rem,6vh,3rem)] ${fitViewport ? 'lg:pt-6' : ''}`}>
               {rightPanel ?? (
-                <div className="space-y-8">
-                  <div className="space-y-6">
+                <div className={`space-y-8 ${fitViewport ? 'lg:space-y-5' : ''}`}>
+                  <div className={`space-y-6 ${fitViewport ? 'lg:space-y-4' : ''}`}>
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       University Security Platform
                     </div>
-                    <h2 className="text-4xl font-bold tracking-[-0.04em] text-white leading-[1.15]">
+                    <h2 className={`text-4xl font-bold tracking-[-0.04em] text-white leading-[1.15] ${fitViewport ? 'lg:text-3xl' : ''}`}>
                       One platform.<br />Every gate.<br />All devices.
                     </h2>
                     <p className="text-base leading-7 text-white/60 max-w-sm">
@@ -66,9 +67,9 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
                     </p>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className={`space-y-3 ${fitViewport ? 'lg:space-y-2' : ''}`}>
                     {features.map(({ icon: Icon, label, desc }) => (
-                      <div key={label} className="flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
+                      <div key={label} className={`flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm ${fitViewport ? 'lg:py-2' : ''}`}>
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10">
                           <Icon className="h-4 w-4 text-white/80" />
                         </div>
@@ -87,7 +88,7 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
         </div>
 
         {/* ── Right form panel ── */}
-        <div className="flex w-full flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 lg:px-10 xl:px-16">
+        <div className={`flex w-full flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 lg:px-10 xl:px-16 ${fitViewport ? 'auth-layout-fit__form lg:py-3 xl:py-5' : ''}`}>
           {/* Mobile header */}
           <div className="mb-6 flex w-full max-w-[480px] items-center justify-between lg:hidden">
             <div className="flex items-center gap-2.5">
@@ -102,10 +103,10 @@ export function AuthLayout({ locale, children, title, subtitle, footer, rightPan
             <LanguageSelector />
           </div>
 
-          <div className="w-full max-w-[480px]">
+          <div className={`w-full max-w-[480px] ${fitViewport ? 'lg:max-w-[560px]' : ''}`}>
             {/* Card */}
-            <div className="rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-6 shadow-[var(--cg-shadow-card)] sm:p-8">
-              <div className="mb-6 flex items-start justify-between gap-4">
+            <div className={`rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-6 shadow-[var(--cg-shadow-card)] sm:p-8 ${fitViewport ? 'lg:p-5 xl:p-6' : ''}`}>
+              <div className={`mb-6 flex items-start justify-between gap-4 ${fitViewport ? 'lg:mb-3 xl:mb-4' : ''}`}>
                 <div>
                   <h1 className="text-2xl font-bold tracking-[-0.04em] text-[var(--cg-text)]">{title}</h1>
                   <p className="mt-1 text-sm leading-5 text-[var(--cg-text-muted)]">{subtitle}</p>

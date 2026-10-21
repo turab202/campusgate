@@ -100,6 +100,7 @@ export default function RegisterPage() {
       locale={locale}
       title={t.registerTitle}
       subtitle={t.registerSubtitle}
+      fitViewport
       footer={
         <div className="flex items-center justify-between gap-3 border-t border-[var(--cg-border)] pt-4 text-sm text-[var(--cg-text-muted)]">
           <span>{t.haveAccount}</span>
@@ -111,32 +112,32 @@ export default function RegisterPage() {
     >
       {submitError ? <Alert variant="danger" className="mb-4">{submitError}</Alert> : null}
 
-      <form className="mt-3 space-y-2.5" onSubmit={handleSubmit} noValidate>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label={t.fullName} error={errors.name}>
-            <Input id="full-name" type="text" autoComplete="name"
+      <form className="mt-3 space-y-2.5 lg:mt-2 lg:space-y-1.5" onSubmit={handleSubmit} noValidate>
+        <div className="grid gap-3 sm:grid-cols-2 lg:gap-2">
+          <FormField label={t.fullName} error={errors.name} className="space-y-1 lg:space-y-0.5">
+            <Input id="full-name" type="text" autoComplete="name" className="lg:h-10"
               placeholder={locale === 'am' ? 'ሙሉ ስምዎን ያስገቡ' : 'Your full name'}
               value={form.name} onChange={(e) => field('name', e.target.value)} disabled={submitting} />
           </FormField>
-          <FormField label={locale === 'am' ? 'የዩኒቨርሲቲ መለያ' : 'University ID'} error={errors.studentId}>
-            <Input id="student-id" type="text" autoComplete="off" placeholder="ASTU-2024-01234"
+          <FormField label={locale === 'am' ? 'የዩኒቨርሲቲ መለያ' : 'University ID'} error={errors.studentId} className="space-y-1 lg:space-y-0.5">
+            <Input id="student-id" type="text" autoComplete="off" placeholder="ASTU-2024-01234" className="lg:h-10"
               value={form.studentId} onChange={(e) => field('studentId', e.target.value)} disabled={submitting} />
           </FormField>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label={t.department} error={errors.department}>
-            <Input id="department" type="text"
+        <div className="grid gap-3 sm:grid-cols-2 lg:gap-2">
+          <FormField label={t.department} error={errors.department} className="space-y-1 lg:space-y-0.5">
+            <Input id="department" type="text" className="lg:h-10"
               placeholder={locale === 'am' ? 'ለምሳሌ: ሶፍትዌር ምህንድስና' : 'e.g. Software Engineering'}
               value={form.department} onChange={(e) => field('department', e.target.value)} disabled={submitting} />
           </FormField>
-          <FormField label={locale === 'am' ? 'አካውንት አይነት' : 'Account type'}>
+          <FormField label={locale === 'am' ? 'አካውንት አይነት' : 'Account type'} className="space-y-1 lg:space-y-0.5">
             <select
               id="account-role"
               value={form.role}
               onChange={(e) => field('role', e.target.value as 'STUDENT' | 'STAFF')}
               disabled={submitting}
-              className="h-11 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary-soft)]"
+              className="h-11 w-full rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary-soft)] lg:h-10"
             >
               <option value="STUDENT">Student</option>
               <option value="STAFF">Staff</option>
@@ -144,25 +145,25 @@ export default function RegisterPage() {
           </FormField>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label={t.phone}>
-            <Input id="phone" type="tel" autoComplete="tel" placeholder="+251 91 000 0000"
+        <div className="grid gap-3 sm:grid-cols-2 lg:gap-2">
+          <FormField label={t.phone} className="space-y-1 lg:space-y-0.5">
+            <Input id="phone" type="tel" autoComplete="tel" placeholder="+251 91 000 0000" className="lg:h-10"
               value={form.phone} onChange={(e) => field('phone', e.target.value)} disabled={submitting} />
           </FormField>
-          <FormField label={locale === 'am' ? 'የዩኒቨርሲቲ ኢሜይል' : 'University Email'} error={errors.email}>
-            <Input id="email" type="email" autoComplete="email"
+          <FormField label={locale === 'am' ? 'የዩኒቨርሲቲ ኢሜይል' : 'University Email'} error={errors.email} className="space-y-1 lg:space-y-0.5">
+            <Input id="email" type="email" autoComplete="email" className="lg:h-10"
               placeholder={locale === 'am' ? 'ስምዎ@astu.edu.et' : 'yourname@astu.edu.et'}
               value={form.email} onChange={(e) => field('email', e.target.value)} disabled={submitting} />
           </FormField>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label={t.password} error={errors.password}>
-            <PasswordInput id="password" autoComplete="new-password" placeholder="••••••••"
+        <div className="grid gap-3 sm:grid-cols-2 lg:gap-2">
+          <FormField label={t.password} error={errors.password} className="space-y-1 lg:space-y-0.5">
+            <PasswordInput id="password" autoComplete="new-password" placeholder="••••••••" className="lg:h-10"
               value={form.password} onChange={(e) => field('password', e.target.value)} disabled={submitting} />
           </FormField>
-          <FormField label={locale === 'am' ? 'የይለፍ ቃል አረጋግጥ' : 'Confirm Password'} error={errors.confirmPassword}>
-            <PasswordInput id="confirm-password" autoComplete="new-password" placeholder="••••••••"
+          <FormField label={locale === 'am' ? 'የይለፍ ቃል አረጋግጥ' : 'Confirm Password'} error={errors.confirmPassword} className="space-y-1 lg:space-y-0.5">
+            <PasswordInput id="confirm-password" autoComplete="new-password" placeholder="••••••••" className="lg:h-10"
               value={form.confirmPassword} onChange={(e) => field('confirmPassword', e.target.value)} disabled={submitting} />
           </FormField>
         </div>
