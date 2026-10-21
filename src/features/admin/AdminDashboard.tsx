@@ -14,10 +14,12 @@ import { listIncidentsApi, IncidentRead } from '../../services/incidentService';
 import { listVisitsApi, VisitRead } from '../../services/visitService';
 import { searchUsersApi, UserSearchResult } from '../../services/userService';
 import { ApiError } from '../../services/api';
+import { VisitorManager } from '../officer/VisitorManager';
+import { IncidentManager } from '../officer/IncidentManager';
 
 export const AdminDashboard: React.FC = () => {
-  const { t, language, showToast } = useApp();
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DEVICES' | 'GATES' | 'AUDIT'>('OVERVIEW');
+  const { t, showToast } = useApp();
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DEVICES' | 'GATES' | 'VISITORS' | 'INCIDENTS' | 'AUDIT'>('OVERVIEW');
   const [deviceSearch, setDeviceSearch] = useState('');
   const [deviceStatusFilter, setDeviceStatusFilter] = useState('ALL');
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<string | null>(null);
@@ -187,6 +189,8 @@ export const AdminDashboard: React.FC = () => {
     { id: 'OVERVIEW' as const, label: 'Gate Telemetry', icon: Activity },
     { id: 'DEVICES' as const, label: 'Device Registry', icon: Database },
     { id: 'GATES' as const, label: t('navGates'), icon: GitBranch },
+    { id: 'VISITORS' as const, label: 'Visitor Requests', icon: Users },
+    { id: 'INCIDENTS' as const, label: t('navIncidents'), icon: AlertTriangle },
     { id: 'AUDIT' as const, label: 'Audit Logs', icon: ScrollText },
   ];
 
@@ -635,6 +639,9 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* AUDIT TAB */}
+      {activeTab === 'VISITORS' && <VisitorManager />}
+      {activeTab === 'INCIDENTS' && <IncidentManager />}
+
       {activeTab === 'AUDIT' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)]">

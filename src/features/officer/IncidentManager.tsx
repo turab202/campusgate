@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldAlert, Plus, X, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, X, Loader2, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { EmptyState } from '../../components/ui/EmptyState';
 import {
@@ -7,18 +7,24 @@ import {
   IncidentRead, BackendIncidentType, BackendIncidentStatus
 } from '../../services/incidentService';
 import { ApiError } from '../../services/api';
+import { listDevicesApi, DeviceRead } from '../../services/deviceService';
 
 export const IncidentManager: React.FC = () => {
-  const { t, language, showToast } = useApp();
+  const { t, language, showToast, role, currentGate } = useApp();
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [incidentType, setIncidentType] = useState<BackendIncidentType>('OWNER_MISMATCH');
   const [description, setDescription] = useState('');
 
   const [incidents, setIncidents] = useState<IncidentRead[]>([]);
+  const [devices, setDevices] = useState<DeviceRead[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [devicesError, setDevicesError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [busyIncidentId, setBusyIncidentId] = useState<string | null>(null);
+  const isAdmin = role === 'ADMIN';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,15 +43,29 @@ export const IncidentManager: React.FC = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    listDevicesApi()
+      .then(setDevices)
+      .catch((err: unknown) => {
+        setDevicesError(err instanceof ApiError ? err.message : 'Failed to load devices for incident linking.');
+      });
+  }, []);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) return;
     setSubmitting(true);
     try {
-      await createIncidentApi({ incident_type: incidentType, description });
+      await createIncidentApi({
+        incident_type: incidentType,
+        description: description.trim(),
+        ...(selectedDeviceId ? { device_id: selectedDeviceId } : {}),
+        ...(role === 'OFFICER' && currentGate.id ? { gate_id: currentGate.id } : {}),
+      });
       showToast('Incident logged into central security registry', 'warning');
       setShowCreateModal(false);
       setDescription('');
+      setSelectedDeviceId('');
       load();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to create incident.';
@@ -56,6 +76,7 @@ export const IncidentManager: React.FC = () => {
   };
 
   const handleUpdateStatus = async (id: string, status: BackendIncidentStatus) => {
+    setBusyIncidentId(id);
     try {
       await patchIncidentApi(id, { status });
       showToast(`Incident status updated to ${status}`, 'info');
@@ -63,6 +84,8 @@ export const IncidentManager: React.FC = () => {
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to update incident.';
       showToast(message, 'error');
+    } finally {
+      setBusyIncidentId(null);
     }
   };
 
@@ -95,12 +118,16 @@ export const IncidentManager: React.FC = () => {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
+            disabled={role === 'OFFICER' && !currentGate.id}
             className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--cg-danger)] px-4 py-2.5 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
           >
             <Plus className="h-4 w-4" />
             {t('createIncident')}
           </button>
         </div>
+        {role === 'OFFICER' && currentGate.id && (
+          <p className="text-xs text-[var(--cg-text-muted)]">Reports created here are recorded at {currentGate.name}. Incident status is managed by administrators.</p>
+        )}
       </div>
 
       {/* Status filters */}
@@ -157,10 +184,11 @@ export const IncidentManager: React.FC = () => {
                 <p className="mt-1 text-xs leading-relaxed text-[var(--cg-text-muted)]">{inc.description}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3 text-[11px] sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3 text-[11px] sm:grid-cols-4">
                 {[
                   { label: 'Reported By', value: inc.reported_by.slice(0, 8) + '…', mono: true },
                   { label: 'Device', value: inc.device_id ? inc.device_id.slice(0, 8) + '…' : 'N/A', mono: true },
+                  { label: 'Gate', value: inc.gate_id ? inc.gate_id.slice(0, 8) + '…' : 'N/A', mono: true },
                   { label: 'Logged', value: new Date(inc.created_at).toLocaleString() },
                 ].map(({ label, value, mono }) => (
                   <div key={label}>
@@ -171,25 +199,28 @@ export const IncidentManager: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-end gap-1.5 border-t border-[var(--cg-border)] pt-2">
-                {inc.status === 'OPEN' && (
+                {isAdmin && inc.status === 'OPEN' && (
                   <button
                     onClick={() => handleUpdateStatus(inc.id, 'INVESTIGATING')}
+                    disabled={busyIncidentId === inc.id}
                     className="rounded border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition-colors"
                   >
                     Mark Investigating
                   </button>
                 )}
-                {inc.status === 'INVESTIGATING' && (
+                {isAdmin && inc.status === 'INVESTIGATING' && (
                   <button
                     onClick={() => handleUpdateStatus(inc.id, 'RESOLVED')}
+                    disabled={busyIncidentId === inc.id}
                     className="rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-[var(--cg-success)] hover:bg-emerald-100 transition-colors"
                   >
                     Resolve
                   </button>
                 )}
-                {inc.status === 'RESOLVED' && (
+                {isAdmin && inc.status === 'RESOLVED' && (
                   <button
                     onClick={() => handleUpdateStatus(inc.id, 'CLOSED')}
+                    disabled={busyIncidentId === inc.id}
                     className="rounded border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--cg-text-muted)] hover:bg-[var(--cg-border)] transition-colors"
                   >
                     Close
@@ -212,6 +243,11 @@ export const IncidentManager: React.FC = () => {
               </button>
             </div>
             <form onSubmit={handleCreate} className="p-5 space-y-4 text-xs">
+              {devicesError && (
+                <p role="alert" className="text-xs text-[var(--cg-danger)]">
+                  {devicesError} Incidents can still be submitted without linking a device.
+                </p>
+              )}
               <div className="space-y-1.5">
                 <label className="block font-semibold text-[var(--cg-text)]">Incident Category</label>
                 <select value={incidentType} onChange={(e) => setIncidentType(e.target.value as BackendIncidentType)}
@@ -222,6 +258,23 @@ export const IncidentManager: React.FC = () => {
                   <option value="OTHER">Other</option>
                 </select>
               </div>
+              <div className="space-y-1.5">
+                <label className="block font-semibold text-[var(--cg-text)]">Related device (optional)</label>
+                <select value={selectedDeviceId} onChange={(e) => setSelectedDeviceId(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-[var(--cg-text)]">
+                  <option value="">No device linked</option>
+                  {devices.map((device) => (
+                    <option key={device.id} value={device.id}>
+                      {device.asset_id} · {device.serial_number}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {role === 'OFFICER' && (
+                <p className="text-xs text-[var(--cg-text-muted)]">
+                  Gate: {currentGate.id ? currentGate.name : 'No active assignment'}
+                </p>
+              )}
               <div className="space-y-1.5">
                 <label className="block font-semibold text-[var(--cg-text)]">Description *</label>
                 <textarea required rows={3} value={description} onChange={(e) => setDescription(e.target.value)}

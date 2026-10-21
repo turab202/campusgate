@@ -8,10 +8,13 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.audit_log import AuditLog
+from app.models.device import Device
 from app.models.enums import IncidentStatus, IncidentType, UserRole
+from app.models.gate import Gate
 from app.models.incident import Incident
 from app.models.user import User
 from app.schemas.incident import IncidentCreate, IncidentPatchRequest, IncidentRead
+from app.services.assignment_service import get_active_gate
 from app.services.incident_service import patch_incident
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
@@ -77,10 +80,20 @@ def create_incident(
     The reported_by field in the body is overridden with the authenticated actor's ID
     to prevent impersonation.
     """
+    if body.device_id is not None and db.get(Device, body.device_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+
+    if actor.role == UserRole.GATE_OFFICER:
+        gate_id = get_active_gate(db, actor).id
+    else:
+        gate_id = body.gate_id
+        if gate_id is not None and db.get(Gate, gate_id) is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gate not found")
+
     incident = Incident(
         device_id=body.device_id,
         reported_by=actor.id,
-        gate_id=body.gate_id,
+        gate_id=gate_id,
         incident_type=body.incident_type,
         description=body.description,
         status=IncidentStatus.OPEN,
