@@ -29,6 +29,17 @@ export const GateTransactions: React.FC = () => {
   }, [filterType]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    const intervalId = window.setInterval(refresh, 15000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [load]);
 
   const filtered = searchQuery
     ? movements.filter((m) => {

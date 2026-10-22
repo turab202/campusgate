@@ -100,6 +100,17 @@ export const AdminDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => { loadDevices(); }, [loadDevices]);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void loadDevices();
+    };
+    const intervalId = window.setInterval(refresh, 15000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [loadDevices]);
   useEffect(() => { if (activeTab === 'GATES' || activeTab === 'OVERVIEW') loadGates(); }, [activeTab, loadGates]);
   useEffect(() => { if (activeTab === 'AUDIT') loadAudit(); }, [activeTab, loadAudit]);
 
@@ -204,12 +215,12 @@ export const AdminDashboard: React.FC = () => {
   ];
 
   const statCards = [
-    { label: t('totalEnrolledDevices'), value: totalEnrolled, sub: 'Unique Asset IDs', color: 'text-white', icon: Database, iconBg: 'bg-white/15' },
-    { label: 'Inside Campus', value: currentlyInside, sub: 'On university grounds', color: 'text-emerald-300', icon: TrendingUp, iconBg: 'bg-emerald-400/15' },
-    { label: t('currentlyOutside'), value: currentlyOutside, sub: 'Exited via gate', color: 'text-sky-300', icon: ArrowUpRight, iconBg: 'bg-sky-400/15' },
-    { label: "Today's Check-Ins", value: totalCheckInsToday, sub: 'All gates combined', color: 'text-emerald-300', icon: Zap, iconBg: 'bg-emerald-400/15' },
-    { label: "Today's Check-Outs", value: totalCheckOutsToday, sub: 'All gates combined', color: 'text-sky-300', icon: Users, iconBg: 'bg-sky-400/15' },
-    { label: 'Active Alerts', value: totalIncidentsOpen + currentlyLost, sub: `${currentlyLost} Lost · ${totalIncidentsOpen} Open`, color: 'text-red-300', icon: AlertTriangle, iconBg: 'bg-red-400/15' },
+    { label: t('totalEnrolledDevices'), value: totalEnrolled, sub: 'Unique Asset IDs', color: 'text-[var(--cg-text)]', icon: Database, iconBg: 'bg-[var(--cg-primary-light)] text-[var(--cg-primary)]' },
+    { label: 'Inside Campus', value: currentlyInside, sub: 'On university grounds', color: 'text-[var(--cg-success)]', icon: TrendingUp, iconBg: 'bg-[var(--cg-success-bg)] text-[var(--cg-success)]' },
+    { label: t('currentlyOutside'), value: currentlyOutside, sub: 'Exited via gate', color: 'text-[var(--cg-info)]', icon: ArrowUpRight, iconBg: 'bg-[var(--cg-info-bg)] text-[var(--cg-info)]' },
+    { label: "Today's Check-Ins", value: totalCheckInsToday, sub: 'All gates combined', color: 'text-[var(--cg-success)]', icon: Zap, iconBg: 'bg-[var(--cg-success-bg)] text-[var(--cg-success)]' },
+    { label: "Today's Check-Outs", value: totalCheckOutsToday, sub: 'All gates combined', color: 'text-[var(--cg-info)]', icon: Users, iconBg: 'bg-[var(--cg-info-bg)] text-[var(--cg-info)]' },
+    { label: 'Active Alerts', value: totalIncidentsOpen + currentlyLost, sub: `${currentlyLost} Lost · ${totalIncidentsOpen} Open`, color: 'text-[var(--cg-danger)]', icon: AlertTriangle, iconBg: 'bg-[var(--cg-danger-bg)] text-[var(--cg-danger)]' },
   ];
 
   return (
@@ -291,7 +302,7 @@ export const AdminDashboard: React.FC = () => {
               {statCards.map(({ label, value, sub, color, icon: Icon, iconBg }) => (
                 <div key={label} className="rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-2.5">
                   <div className={`mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg ${iconBg}`}>
-                    <Icon className={`h-3.5 w-3.5 ${color}`} />
+                    <Icon className="h-3.5 w-3.5" />
                   </div>
                   <div className={`font-mono text-lg font-bold ${color}`}>{value}</div>
                   <div className="mt-0.5 text-[9px] font-semibold text-[var(--cg-text-muted)]">{label}</div>

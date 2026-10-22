@@ -68,6 +68,17 @@ export const StudentView: React.FC = () => {
   }, [authUser]);
 
   useEffect(() => { loadDevices(); }, [loadDevices]);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void loadDevices();
+    };
+    const intervalId = window.setInterval(refresh, 15000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [loadDevices]);
 
   const loadMovements = useCallback(async (deviceId: string) => {
     setMovementsLoading(true);

@@ -7,6 +7,7 @@ import { campusStore } from '../services/storage';
 import { AuthUser, BackendRole, loginApi, logoutApi, meApi, meToAuthUser } from '../services/authService';
 import { ApiError } from '../services/api';
 import { GateAssignmentRead, getCurrentAssignmentApi, listGatesApi } from '../services/gateService';
+import { listMovementsApi } from '../services/movementService';
 
 // ---------------------------------------------------------------------------
 // Backend role → frontend UserRole
@@ -146,6 +147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     let isCurrent = true;
+    let isRefreshing = false;
 
     if (!authUser) {
       setLiveGates([]);
@@ -163,8 +165,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return () => { isCurrent = false; };
     }
 
-    setIsGateContextLoading(true);
-    const loadOperationalContext = async () => {
+    const loadOperationalContext = async (showLoading: boolean) => {
+      if (isRefreshing) return;
+      isRefreshing = true;
+      if (showLoading) setIsGateContextLoading(true);
       try {
         const gates = await listGatesApi();
         if (!isCurrent) return;
@@ -183,9 +187,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (!isCurrent) return;
           const assignedGate = mapped.find((gate) => gate.id === assignment.gate_id);
           if (!assignedGate) throw new Error('Assigned gate is unavailable.');
+          const now = new Date();
+          const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+          const movements = await listMovementsApi({
+            gate_id: assignment.gate_id,
+            from_date: startOfDay,
+          });
+          if (!isCurrent) return;
+          const liveGate = {
+            ...assignedGate,
+            todayStats: {
+              ...assignedGate.todayStats,
+              checkIns: movements.filter((movement) => movement.movement_type === 'CHECK_IN').length,
+              checkOuts: movements.filter((movement) => movement.movement_type === 'CHECK_OUT').length,
+            },
+          };
           setActiveAssignment(assignment);
-          setLiveGates([assignedGate]);
-          setCurrentGateIdState(assignedGate.id);
+          setLiveGates([liveGate]);
+          setCurrentGateIdState(liveGate.id);
           return;
         }
 
@@ -194,17 +213,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentGateIdState(mapped[0]?.id ?? '');
       } catch {
         if (isCurrent) {
-          setLiveGates([]);
-          setActiveAssignment(null);
-          setCurrentGateIdState('');
+          if (showLoading) {
+            setLiveGates([]);
+            setActiveAssignment(null);
+            setCurrentGateIdState('');
+          }
         }
       } finally {
-        if (isCurrent) setIsGateContextLoading(false);
+        isRefreshing = false;
+        if (isCurrent && showLoading) setIsGateContextLoading(false);
       }
     };
 
-    void loadOperationalContext();
-    return () => { isCurrent = false; };
+    void loadOperationalContext(true);
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void loadOperationalContext(false);
+    };
+    const intervalId = window.setInterval(refresh, 15000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      isCurrent = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refresh);
+    };
   }, [authUser]);
 
   // ── UI ────────────────────────────────────────────────────────────────────
