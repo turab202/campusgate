@@ -259,7 +259,7 @@ export const VisitorManager: React.FC = () => {
                   <button onClick={() => handleCheckIn(vis.id, qrCodeInput)} disabled={!currentGate.id || busyVisitId === vis.id || qrCodeInput !== vis.qr_code_value}
                     className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--cg-success)] py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-60">
                     <LogIn className="h-3.5 w-3.5" />
-                    {qrCodeInput === vis.qr_code_value ? t('checkInVisitor') : 'Scan this visitor’s QR to check in'}
+                    {qrCodeInput === vis.qr_code_value ? t('checkInVisitor') : 'Scan visitor QR to check in'}
                   </button>
                 )}
                 {!isAdmin && vis.status === 'CHECKED_IN' && (

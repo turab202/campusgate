@@ -239,7 +239,7 @@ export const StudentView: React.FC = () => {
             }`}
           >
             <Icon aria-hidden="true" className="h-5 w-5" />
-            <span>{label}</span>
+            <span className="max-w-full truncate whitespace-nowrap text-[9px]">{label}</span>
             {count > 0 && (
               <span className="absolute left-1/2 top-1 flex h-4 min-w-4 translate-x-3 items-center justify-center rounded-full bg-[var(--cg-primary)] px-1 text-[9px] font-bold text-white">{count}</span>
             )}
@@ -306,20 +306,20 @@ export const StudentView: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="mt-4 flex items-center justify-between border-t border-[var(--cg-border)] pt-3">
-                          <div className="flex items-center gap-2">
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--cg-border)] pt-3">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <button onClick={() => setSelectedDeviceForQr(dev)}
-                              className="flex items-center gap-1.5 rounded-xl bg-[var(--cg-primary)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
+                              className="flex items-center gap-1.5 rounded-xl bg-[var(--cg-primary)] px-2.5 py-2 text-[11px] font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors sm:px-3.5 sm:text-xs">
                               <QrCode className="h-3.5 w-3.5" />{t('viewQr')}
                             </button>
                             <button onClick={() => handleSelectDeviceForHistory(dev.id)}
-                              className="flex items-center gap-1.5 rounded-xl border border-[var(--cg-border)] px-3 py-2 text-xs font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">
+                              className="flex items-center gap-1.5 rounded-xl border border-[var(--cg-border)] px-2.5 py-2 text-[11px] font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors sm:px-3 sm:text-xs">
                               <Clock className="h-3.5 w-3.5" /> History
                             </button>
                           </div>
                           {dev.status !== 'LOST' && dev.status !== 'REPORTED_LOST' ? (
                             <button onClick={() => setDeviceToReportLost(dev)}
-                              className="flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium text-[var(--cg-danger)] hover:bg-[var(--cg-danger-bg)] transition-colors">
+                              className="flex items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium text-[var(--cg-danger)] hover:bg-[var(--cg-danger-bg)] transition-colors sm:px-3 sm:text-xs">
                               <AlertTriangle className="h-3.5 w-3.5" />{t('reportLostBtn')}
                             </button>
                           ) : (

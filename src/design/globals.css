@@ -70,6 +70,10 @@ textarea {
   font: inherit;
 }
 
+button {
+  white-space: nowrap;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

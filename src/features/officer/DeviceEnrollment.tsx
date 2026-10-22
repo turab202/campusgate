@@ -327,7 +327,7 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
               <button onClick={() => setStep(2)} className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">
                 <ArrowLeft className="h-4 w-4" /> {language === 'am' ? 'ወደ ኋላ' : 'Back'}
               </button>
-              <button onClick={handleProceedToReview} className="flex items-center gap-2 rounded-lg bg-[var(--cg-primary)] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors">
+              <button onClick={handleProceedToReview} className="flex items-center gap-2 rounded-lg bg-[var(--cg-primary)] px-3 py-2 text-[11px] font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors sm:px-5 sm:py-2.5 sm:text-xs">
                 {language === 'am' ? 'ወደ ማጠቃለያ' : 'Review Summary'} <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -376,7 +376,7 @@ export const DeviceEnrollment: React.FC<DeviceEnrollmentProps> = ({ initialSeria
               <button onClick={() => setStep(3)} className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">
                 <ArrowLeft className="h-4 w-4" /> {language === 'am' ? 'አስተካክል' : 'Edit'}
               </button>
-              <button onClick={handleConfirmEnrollment} disabled={isSubmitting} className="flex items-center gap-2 rounded-lg bg-[var(--cg-primary)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors shadow-sm disabled:opacity-60">
+              <button onClick={handleConfirmEnrollment} disabled={isSubmitting} className="flex items-center gap-2 rounded-lg bg-[var(--cg-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors shadow-sm disabled:opacity-60 sm:px-6 sm:py-3 sm:text-sm">
                 {isSubmitting ? 'Enrolling…' : t('generateAssetId')} <ArrowRight className="h-4 w-4" />
               </button>
             </div>

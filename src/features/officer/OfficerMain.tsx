@@ -46,15 +46,16 @@ export const OfficerMain: React.FC = () => {
               <button
                 key={id}
                 onClick={() => { if (id === 'gate_enroll') setPrefilledSerial(''); setActiveTab(id); }}
-                className={`flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)] ${
+                title={label}
+                className={`flex min-h-11 w-full items-center gap-1.5 rounded-xl px-2 py-2 text-left text-[10px] font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)] sm:gap-2 sm:px-3 sm:py-2.5 sm:text-xs ${
                   activeTab === id
                     ? 'bg-[var(--cg-primary)] text-white shadow-[var(--cg-shadow-xs)]'
                     : 'bg-[var(--cg-surface-muted)] text-[var(--cg-text-muted)] hover:text-[var(--cg-text)]'
                 }`}
                 aria-current={activeTab === id ? 'page' : undefined}
               >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{label}</span>
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 whitespace-nowrap">{label}</span>
               </button>
             ))}
           </nav>

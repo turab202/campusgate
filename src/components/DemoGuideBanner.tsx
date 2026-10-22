@@ -78,7 +78,7 @@ export const DemoGuideBanner: React.FC = () => {
   ];
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 max-w-sm sm:max-w-md no-print">
+    <div className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-sm no-print sm:left-auto sm:right-4 sm:mx-0 sm:max-w-md">
       {isExpanded ? (
         <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
           <div className="bg-slate-900 text-white p-3.5 flex items-center justify-between">
