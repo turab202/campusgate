@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield, Download, Search, ArrowDownLeft, ArrowUpRight,
   Activity, Database, GitBranch, ScrollText,
-  TrendingUp, AlertTriangle, Users, Zap, Loader2, RefreshCw, Plus
+  TrendingUp, AlertTriangle, Users, Zap, Loader2, RefreshCw, Plus, UserRoundCog
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -17,10 +17,11 @@ import { ApiError } from '../../services/api';
 import { VisitorManager } from '../officer/VisitorManager';
 import { IncidentManager } from '../officer/IncidentManager';
 import { Button } from '../../components/ui/Button';
+import { AdminUserManagement } from './AdminUserManagement';
 
 export const AdminDashboard: React.FC = () => {
   const { t, showToast } = useApp();
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DEVICES' | 'GATES' | 'VISITORS' | 'INCIDENTS' | 'AUDIT'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DEVICES' | 'GATES' | 'USERS' | 'VISITORS' | 'INCIDENTS' | 'AUDIT'>('OVERVIEW');
   const [deviceSearch, setDeviceSearch] = useState('');
   const [deviceStatusFilter, setDeviceStatusFilter] = useState('ALL');
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<string | null>(null);
@@ -196,6 +197,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'OVERVIEW' as const, label: 'Gate Telemetry', icon: Activity },
     { id: 'DEVICES' as const, label: 'Device Registry', icon: Database },
     { id: 'GATES' as const, label: t('navGates'), icon: GitBranch },
+    { id: 'USERS' as const, label: 'User Management', icon: UserRoundCog },
     { id: 'VISITORS' as const, label: 'Visitor Requests', icon: Users },
     { id: 'INCIDENTS' as const, label: t('navIncidents'), icon: AlertTriangle },
     { id: 'AUDIT' as const, label: 'Audit Logs', icon: ScrollText },
@@ -677,6 +679,7 @@ export const AdminDashboard: React.FC = () => {
       {/* AUDIT TAB */}
       {activeTab === 'VISITORS' && <VisitorManager />}
       {activeTab === 'INCIDENTS' && <IncidentManager />}
+      {activeTab === 'USERS' && <AdminUserManagement />}
 
       {activeTab === 'AUDIT' && (
         <div className="space-y-4">

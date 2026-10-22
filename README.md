@@ -143,7 +143,10 @@ The project uses backend authorization as the source of truth.
 ### Administrator
 
 - Manage devices, gates, gate assignments, incidents, visitors, and audit logs
+- Create and update administrator and gate officer accounts, reset passwords, and deactivate/reactivate accounts
 - Review security and operational telemetry
+
+Privileged account deactivation preserves audit history. The last active administrator and the current administrator's own account cannot be deactivated or demoted.
 
 ## Local development setup
 

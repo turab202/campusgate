@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.models.enums import UserRole
 
@@ -58,6 +58,76 @@ class UserRegistrationRequest(BaseModel):
         if value not in (UserRole.STUDENT, UserRole.STAFF):
             raise ValueError("Public registration is limited to STUDENT and STAFF")
         return value
+
+
+class ManagedUserCreate(BaseModel):
+    full_name: str = Field(min_length=1, max_length=255)
+    email: EmailStr
+    password: str = Field(min_length=16, max_length=72)
+    role: UserRole
+    phone: str | None = Field(default=None, max_length=50)
+    department: str | None = Field(default=None, max_length=255)
+    campus_id: str | None = Field(default=None, max_length=50)
+
+    @field_validator("full_name")
+    @classmethod
+    def managed_name_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("full_name must not be blank")
+        return value.strip()
+
+    @field_validator("password")
+    @classmethod
+    def managed_password_within_bcrypt_limit(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("password must be at most 72 UTF-8 bytes")
+        return value
+
+    @field_validator("role")
+    @classmethod
+    def privileged_role_only(cls, value: UserRole) -> UserRole:
+        if value not in (UserRole.GATE_OFFICER, UserRole.ADMIN):
+            raise ValueError("Managed accounts must be ADMIN or GATE_OFFICER")
+        return value
+
+
+class ManagedUserUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: EmailStr | None = None
+    role: UserRole | None = None
+    is_active: bool | None = None
+    password: str | None = Field(default=None, min_length=16, max_length=72)
+
+    @field_validator("full_name")
+    @classmethod
+    def updated_name_not_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if not value.strip():
+            raise ValueError("full_name must not be blank")
+        return value.strip()
+
+    @field_validator("password")
+    @classmethod
+    def updated_password_within_bcrypt_limit(cls, value: str | None) -> str | None:
+        if value is not None and len(value.encode("utf-8")) > 72:
+            raise ValueError("password must be at most 72 UTF-8 bytes")
+        return value
+
+    @field_validator("role")
+    @classmethod
+    def updated_privileged_role_only(cls, value: UserRole | None) -> UserRole | None:
+        if value is not None and value not in (UserRole.GATE_OFFICER, UserRole.ADMIN):
+            raise ValueError("Managed accounts must be ADMIN or GATE_OFFICER")
+        return value
+
+    @model_validator(mode="after")
+    def at_least_one_field_must_be_updated(self):
+        if not self.model_fields_set:
+            raise ValueError("At least one field must be provided")
+        if any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("Updated fields cannot be null")
+        return self
 
 
 class UserRegistrationRead(BaseModel):
