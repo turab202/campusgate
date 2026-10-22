@@ -55,6 +55,8 @@ export interface DeviceRead {
   brand: string | null;
   model: string | null;
   owner_id: string;
+  owner_name: string;
+  owner_campus_id: string | null;
   status: BackendDeviceStatus;
   qr_code_value: string;
   registered_at: string;

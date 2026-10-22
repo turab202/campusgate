@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.deps import get_current_user
 from app.db.session import get_db
@@ -45,7 +45,7 @@ def list_devices(
     - STUDENT/STAFF: only their own devices (owner_id filter forced to self).
     - GATE_OFFICER/ADMIN: any device, all filters available.
     """
-    q = select(Device)
+    q = select(Device).options(joinedload(Device.owner))
 
     # Enforce ownership for students/staff
     if actor.role in (UserRole.STUDENT, UserRole.STAFF):

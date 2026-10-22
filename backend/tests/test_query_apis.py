@@ -287,6 +287,9 @@ def test_device_list_officer_sees_all(db):
     assert resp.status_code == 200
     ids = [d["id"] for d in resp.json()]
     assert str(dev.id) in ids
+    listed_device = next(device for device in resp.json() if device["id"] == str(dev.id))
+    assert listed_device["owner_name"] == owner.full_name
+    assert listed_device["owner_campus_id"] == owner.campus_id
 
 
 def test_device_list_admin_sees_all(db):

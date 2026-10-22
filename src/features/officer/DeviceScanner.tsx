@@ -25,8 +25,8 @@ function toFrontendDevice(d: DeviceRead): Device {
     model: d.model ?? '',
     deviceType: d.device_type as Device['deviceType'],
     ownerId: d.owner_id,
-    ownerName: '',          // not returned by list endpoint — shown as blank
-    ownerStudentId: '',     // not returned by list endpoint
+    ownerName: d.owner_name,
+    ownerStudentId: d.owner_campus_id ?? '',
     ownerDepartment: '',
     status: d.status as Device['status'],
     enrollmentDate: d.registered_at,

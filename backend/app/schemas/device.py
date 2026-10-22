@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, field_validator
+from pydantic import AliasPath, BaseModel, Field, field_validator
 
 from app.models.enums import DeviceStatus, DeviceType
 
@@ -53,6 +53,8 @@ class DeviceRead(BaseModel):
     brand: str | None
     model: str | None
     owner_id: uuid.UUID
+    owner_name: str = Field(validation_alias=AliasPath("owner", "full_name"))
+    owner_campus_id: str | None = Field(validation_alias=AliasPath("owner", "campus_id"))
     status: DeviceStatus
     qr_code_value: str
     registered_at: datetime
