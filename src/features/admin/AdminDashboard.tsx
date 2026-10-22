@@ -546,7 +546,6 @@ export const AdminDashboard: React.FC = () => {
                   type="submit"
                   disabled={submitting}
                   icon={<Plus className="h-4 w-4" />}
-                  centeredLabel
                   className="w-full sm:w-auto sm:min-w-40"
                 >
                   {submitting ? 'Creating gate…' : 'Create gate'}
@@ -640,7 +639,7 @@ export const AdminDashboard: React.FC = () => {
                   className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10" />
               </div>
               <div className="sm:col-span-2 flex justify-end">
-                <Button type="submit" disabled={submitting || !assignOfficerId || !assignGateId || !assignStart} centeredLabel className="w-full sm:w-auto sm:min-w-44">
+                <Button type="submit" disabled={submitting || !assignOfficerId || !assignGateId || !assignStart} className="w-full sm:w-auto sm:min-w-44">
                   {submitting ? 'Assigning officer…' : 'Assign officer'}
                 </Button>
               </div>
@@ -693,7 +692,6 @@ export const AdminDashboard: React.FC = () => {
               variant="secondary"
               size="sm"
               icon={<RefreshCw className={`h-3.5 w-3.5 ${auditLoading ? 'animate-spin' : ''}`} />}
-              centeredLabel
               className="min-w-28"
             >
               Refresh

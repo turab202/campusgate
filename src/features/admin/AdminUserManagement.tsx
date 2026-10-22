@@ -194,7 +194,7 @@ export function AdminUserManagement() {
           </div>
           <div className="flex flex-wrap items-end justify-end gap-2 sm:col-span-2 xl:col-span-3">
             {editing && <Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button>}
-            <Button type="submit" disabled={submitting} icon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <KeyRound className="h-4 w-4" /> : <Plus className="h-4 w-4" />} centeredLabel className="w-full sm:w-auto sm:min-w-48">
+            <Button type="submit" disabled={submitting} icon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <KeyRound className="h-4 w-4" /> : <Plus className="h-4 w-4" />} className="w-full sm:w-auto sm:min-w-48">
               {submitting ? 'Saving account…' : editing ? 'Save changes' : 'Create account'}
             </Button>
           </div>
