@@ -31,8 +31,8 @@ export const AuthModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 overflow-y-auto">
-      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden my-8">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/45 p-2 sm:items-center sm:p-4">
+      <div className="my-auto w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
         <header className="border-b border-slate-200 bg-slate-50 px-5 py-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">

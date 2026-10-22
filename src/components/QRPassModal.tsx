@@ -42,17 +42,22 @@ export const QRPassModal: React.FC<QRPassModalProps> = ({ device, isOpen, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-      <div className="relative w-full max-w-lg rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 p-2 sm:items-center sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="device-pass-title"
+        className="relative my-auto flex max-h-[calc(100dvh-1rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] sm:max-h-[calc(100dvh-2rem)]"
+      >
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--cg-border)] bg-[var(--cg-primary)] px-5 py-4 no-print">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white">
               <ShieldCheck className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="font-semibold text-base text-white">
+              <h3 id="device-pass-title" className="font-semibold text-base text-white">
                 {language === 'am' ? 'የመሳሪያ QR መለያ' : 'Device Identity Pass'}
               </h3>
               <p className="text-[11px] text-white/70 font-mono">{device.assetId}</p>
@@ -68,10 +73,10 @@ export const QRPassModal: React.FC<QRPassModalProps> = ({ device, isOpen, onClos
         </div>
 
         {/* Printable body */}
-        <div className="p-6 printable-area">
+        <div className="min-h-0 overflow-y-auto p-4 printable-area sm:p-6">
           {/* Institution header */}
-          <div className="flex items-center justify-between border-b border-[var(--cg-border)] pb-4 mb-5">
-            <div>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--cg-border)] pb-4">
+            <div className="min-w-0">
               <span className="block font-semibold text-sm text-[var(--cg-text)]">CampusGate Access Registry</span>
               <span className="block text-[11px] text-[var(--cg-text-muted)]">
                 {language === 'am' ? 'የተረጋገጠ የግል ኤሌክትሮኒክስ መለያ' : 'Authorized University Personal Device Pass'}
@@ -84,15 +89,15 @@ export const QRPassModal: React.FC<QRPassModalProps> = ({ device, isOpen, onClos
           </div>
 
           {/* QR code */}
-          <div className="flex flex-col items-center rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-5 mb-5">
+          <div className="mb-5 flex flex-col items-center rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3 sm:p-5">
             {qrDataUrl ? (
               <img
                 src={qrDataUrl}
                 alt={`QR code for ${device.assetId}`}
-                className="h-44 w-44 rounded-lg border border-[var(--cg-border)] bg-white p-2"
+                className="h-36 w-36 rounded-lg border border-[var(--cg-border)] bg-white p-2 sm:h-44 sm:w-44"
               />
             ) : (
-              <div className="flex h-44 w-44 items-center justify-center rounded-lg border border-[var(--cg-border)] bg-white text-xs text-[var(--cg-text-muted)]">
+              <div className="flex h-36 w-36 items-center justify-center rounded-lg border border-[var(--cg-border)] bg-white text-xs text-[var(--cg-text-muted)] sm:h-44 sm:w-44">
                 Generating…
               </div>
             )}
@@ -100,34 +105,34 @@ export const QRPassModal: React.FC<QRPassModalProps> = ({ device, isOpen, onClos
               <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--cg-text-muted)]">
                 {language === 'am' ? 'የመሳሪያ መለያ ቁጥር' : 'Permanent Asset Identifier'}
               </span>
-              <span className="mt-1 inline-block rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 py-1 font-mono text-lg font-semibold text-[var(--cg-text)]">
+              <span className="mt-1 inline-block max-w-full break-all rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 py-1 font-mono text-base font-semibold text-[var(--cg-text)] sm:text-lg">
                 {device.assetId}
               </span>
             </div>
           </div>
 
           {/* Device details */}
-          <div className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-4 text-xs">
+          <div className="grid grid-cols-1 gap-3 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3 text-xs sm:grid-cols-2 sm:p-4">
             <div>
               <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{t('deviceModel')}</span>
-              <span className="mt-0.5 flex items-center gap-1 font-semibold text-[var(--cg-text)]">
+              <span className="mt-0.5 flex min-w-0 items-center gap-1 break-words font-semibold text-[var(--cg-text)]">
                 <Laptop className="h-3.5 w-3.5 text-[var(--cg-primary)]" />
                 {device.brand} {device.model}
               </span>
             </div>
             <div>
               <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{t('serialNumber')}</span>
-              <span className="mt-0.5 block font-mono font-semibold text-[var(--cg-text)]">{device.serialNumber}</span>
+              <span className="mt-0.5 block break-all font-mono font-semibold text-[var(--cg-text)]">{device.serialNumber}</span>
             </div>
             <div>
               <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{t('registeredOwner')}</span>
-              <span className="mt-0.5 block font-semibold text-[var(--cg-text)]">{device.ownerName}</span>
+              <span className="mt-0.5 block break-words font-semibold text-[var(--cg-text)]">{device.ownerName}</span>
             </div>
             <div>
               <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">{t('studentId')}</span>
-              <span className="mt-0.5 block font-mono font-semibold text-[var(--cg-primary)]">{device.ownerStudentId}</span>
+              <span className="mt-0.5 block break-all font-mono font-semibold text-[var(--cg-primary)]">{device.ownerStudentId}</span>
             </div>
-            <div className="col-span-2 flex items-center justify-between border-t border-[var(--cg-border)] pt-2 text-[11px]">
+            <div className="col-span-full flex flex-wrap items-center justify-between gap-2 border-t border-[var(--cg-border)] pt-2 text-[11px]">
               <span className="text-[var(--cg-text-muted)]">{t('currentStatus')}:</span>
               <span className="font-semibold text-[var(--cg-text)]">{device.status.replace(/_/g, ' ')}</span>
             </div>
@@ -141,18 +146,18 @@ export const QRPassModal: React.FC<QRPassModalProps> = ({ device, isOpen, onClos
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between gap-2 border-t border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-5 py-3 no-print">
-          <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] no-print sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 py-2 text-xs font-semibold text-[var(--cg-text)] hover:bg-[var(--cg-surface-muted)] transition-colors"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-2 py-2 text-xs font-semibold text-[var(--cg-text)] transition-colors hover:bg-[var(--cg-surface-muted)] sm:px-3"
             >
               <Printer className="h-3.5 w-3.5" />
               {t('printQr')}
             </button>
             <button
               onClick={handleDownload}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 py-2 text-xs font-semibold text-[var(--cg-text)] hover:bg-[var(--cg-surface-muted)] transition-colors"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-2 py-2 text-xs font-semibold text-[var(--cg-text)] transition-colors hover:bg-[var(--cg-surface-muted)] sm:px-3"
             >
               <Download className="h-3.5 w-3.5" />
               {t('downloadQr')}
@@ -160,7 +165,7 @@ export const QRPassModal: React.FC<QRPassModalProps> = ({ device, isOpen, onClos
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg bg-[var(--cg-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--cg-primary-hover)] transition-colors"
+            className="min-h-11 rounded-lg bg-[var(--cg-primary)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--cg-primary-hover)]"
           >
             {t('done')}
           </button>

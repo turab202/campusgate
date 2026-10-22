@@ -388,21 +388,21 @@ export const StudentView: React.FC = () => {
 
       {/* Confirm lost modal */}
       {deviceToReportLost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-modal)] p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="confirm-lost-title" className="my-auto w-full max-w-md space-y-4 rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-4 shadow-[var(--cg-shadow-modal)] sm:p-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--cg-danger-bg)]">
               <AlertTriangle className="h-6 w-6 text-[var(--cg-danger)]" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-[var(--cg-text)]">{t('confirmReportLostTitle')}</h3>
+              <h3 id="confirm-lost-title" className="text-lg font-bold text-[var(--cg-text)]">{t('confirmReportLostTitle')}</h3>
               <p className="mt-1 text-xs leading-relaxed text-[var(--cg-text-muted)]">{t('confirmReportLostDesc')}</p>
               <div className="mt-3 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] p-3 font-mono text-xs text-[var(--cg-text)]">
                 {deviceToReportLost.brand} {deviceToReportLost.model} · S/N: {deviceToReportLost.serialNumber}
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <button onClick={() => setDeviceToReportLost(null)} className="rounded-xl px-4 py-2 text-sm font-medium text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">{t('cancel')}</button>
-              <button onClick={handleConfirmLost} className="rounded-xl bg-[var(--cg-danger)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity">{t('confirmReportLostAction')}</button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button onClick={() => setDeviceToReportLost(null)} className="min-h-11 rounded-xl px-4 py-2 text-sm font-medium text-[var(--cg-text-muted)] transition-colors hover:bg-[var(--cg-surface-muted)]">{t('cancel')}</button>
+              <button onClick={handleConfirmLost} className="min-h-11 rounded-xl bg-[var(--cg-danger)] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90">{t('confirmReportLostAction')}</button>
             </div>
           </div>
         </div>

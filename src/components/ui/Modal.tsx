@@ -12,8 +12,8 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-      <div className="w-full max-w-xl rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/45 p-2 sm:items-center sm:p-4">
+      <div className="my-auto max-h-[calc(100dvh-1rem)] w-full max-w-xl overflow-y-auto rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] sm:max-h-[calc(100dvh-2rem)]">
         {(title || description) && (
           <div className="border-b border-[var(--cg-border)] px-5 py-4">
             {title ? <h3 className="text-lg font-semibold text-[var(--cg-text)]">{title}</h3> : null}

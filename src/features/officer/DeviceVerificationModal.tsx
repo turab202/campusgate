@@ -36,12 +36,12 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
   // Unknown device state
   if (isUnknown || !device) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-        <div className="w-full max-w-md rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] overflow-hidden">
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-2 sm:items-center sm:p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="unknown-device-title" className="my-auto w-full max-w-md overflow-hidden rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)]">
           <div className="flex items-center justify-between border-b border-[var(--cg-border)] bg-amber-50 px-5 py-4">
             <div className="flex items-center gap-2.5">
               <AlertTriangle className="h-5 w-5 text-[var(--cg-warning)]" />
-              <h3 className="font-semibold text-[var(--cg-text)]">{t('deviceNotFound')}</h3>
+              <h3 id="unknown-device-title" className="font-semibold text-[var(--cg-text)]">{t('deviceNotFound')}</h3>
             </div>
             <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)]">
               <X className="h-5 w-5" />
@@ -145,8 +145,8 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
     : 'bg-[var(--cg-primary)]';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 overflow-y-auto">
-      <div className="my-8 w-full max-w-xl rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-2 sm:items-center sm:p-4">
+      <div role="dialog" aria-modal="true" aria-labelledby="device-verification-title" className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)]">
 
         {/* Header */}
         <div className={`flex items-center justify-between px-5 py-4 text-white ${headerBg}`}>
@@ -155,7 +155,7 @@ export const DeviceVerificationModal: React.FC<DeviceVerificationModalProps> = (
               {isLost ? <ShieldAlert className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
             </div>
             <div>
-              <h3 className="font-semibold text-base leading-tight">
+              <h3 id="device-verification-title" className="font-semibold text-base leading-tight">
                 {isLost ? t('lostDeviceAlert') : isOwnerMismatch ? t('ownerMismatchAlert') : t('deviceFound')}
               </h3>
               <p className="text-[11px] text-white/70 font-mono">{device.assetId} · {device.brand} {device.model}</p>

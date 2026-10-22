@@ -234,15 +234,15 @@ export const IncidentManager: React.FC = () => {
 
       {/* Create modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-2 sm:items-center sm:p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="create-incident-title" className="my-auto max-h-[calc(100dvh-1rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-card)] sm:max-h-[calc(100dvh-2rem)]">
             <div className="flex items-center justify-between border-b border-[var(--cg-border)] bg-[var(--cg-danger)] px-5 py-4">
-              <h3 className="font-semibold text-white">{t('createIncident')}</h3>
+              <h3 id="create-incident-title" className="font-semibold text-white">{t('createIncident')}</h3>
               <button onClick={() => setShowCreateModal(false)} aria-label="Close" className="text-white/70 hover:text-white">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={handleCreate} className="p-5 space-y-4 text-xs">
+            <form onSubmit={handleCreate} className="space-y-4 p-4 text-xs sm:p-5">
               {devicesError && (
                 <p role="alert" className="text-xs text-[var(--cg-danger)]">
                   {devicesError} Incidents can still be submitted without linking a device.
@@ -281,13 +281,13 @@ export const IncidentManager: React.FC = () => {
                   placeholder="Officer observations and immediate actions…"
                   className="w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 py-2 text-[var(--cg-text)] focus:outline-none focus:border-[var(--cg-primary)]" />
               </div>
-              <div className="flex items-center justify-end gap-2 border-t border-[var(--cg-border)] pt-3">
+              <div className="flex flex-col-reverse gap-2 border-t border-[var(--cg-border)] pt-3 sm:flex-row sm:items-center sm:justify-end">
                 <button type="button" onClick={() => setShowCreateModal(false)}
-                  className="rounded-lg px-4 py-2 text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors">
+                  className="min-h-11 rounded-lg px-4 py-2 text-[var(--cg-text-muted)] transition-colors hover:bg-[var(--cg-surface-muted)]">
                   {t('cancel')}
                 </button>
                 <button type="submit" disabled={submitting}
-                  className="rounded-lg bg-[var(--cg-danger)] px-5 py-2.5 font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-60">
+                  className="min-h-11 rounded-lg bg-[var(--cg-danger)] px-5 py-2.5 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60">
                   {submitting ? 'Submitting…' : 'Submit Incident'}
                 </button>
               </div>
