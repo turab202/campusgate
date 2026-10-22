@@ -281,7 +281,7 @@ export const AdminDashboard: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 icon={<Download className="h-3.5 w-3.5" />}
-                className="min-w-40"
+                className="w-fit max-w-full"
               >
                 {t('exportPdf')}
               </Button>

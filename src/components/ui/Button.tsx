@@ -19,9 +19,9 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'h-9 px-3 text-xs',
-  md: 'h-11 px-4 text-sm',
-  lg: 'h-12 px-5 text-sm'
+  sm: 'h-9 px-2.5 text-[11px] sm:px-3 sm:text-xs',
+  md: 'h-10 px-3 text-xs sm:h-11 sm:px-4 sm:text-sm',
+  lg: 'h-11 px-4 text-sm sm:h-12 sm:px-5'
 };
 
 export function Button({
@@ -39,7 +39,7 @@ export function Button({
     <button
       type={type}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
         centeredLabel ? 'relative' : '',
         variantClasses[variant],
         sizeClasses[size],
@@ -51,7 +51,7 @@ export function Button({
       {icon ? (
         <span className={centeredLabel ? 'absolute left-4 shrink-0' : 'shrink-0'}>{icon}</span>
       ) : null}
-      {centeredLabel ? <span className="w-full text-center">{children}</span> : children}
+      {centeredLabel ? <span className="w-full whitespace-nowrap text-center">{children}</span> : children}
     </button>
   );
 }
