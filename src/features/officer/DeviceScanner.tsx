@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { BrowserQRCodeReader } from '@zxing/browser';
 import {
   Camera, QrCode, Search, AlertTriangle, CheckCircle2,
   User, Hash, Laptop, ShieldAlert, Loader2
@@ -49,25 +50,13 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
   const [searchedTerm, setSearchedTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraAttempt, setCameraAttempt] = useState(0);
   const [studentDeviceResults, setStudentDeviceResults] = useState<Device[]>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    if (scanTab === 'CAMERA' && navigator.mediaDevices?.getUserMedia) {
-      navigator.mediaDevices
-        .getUserMedia({ video: { facingMode: 'environment' } })
-        .then((s) => {
-          stream = s;
-          if (videoRef.current) videoRef.current.srcObject = s;
-        })
-        .catch(() => {/* camera unavailable — graceful fallback */});
-    }
-    return () => { if (stream) stream.getTracks().forEach((t) => t.stop()); };
-  }, [scanTab]);
-
-  const searchDevice = async (query: string) => {
+  const searchDevice = useCallback(async (query: string) => {
     if (!query.trim()) return;
 
     if (isOffline) {
@@ -111,7 +100,69 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
       setIsSearching(false);
       setIsScanning(true);
     }
-  };
+  }, [isOffline, language, showToast]);
+
+  useEffect(() => {
+    if (scanTab !== 'CAMERA' || isModalOpen || isSearching || !videoRef.current) return;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      let isActive = true;
+      Promise.resolve().then(() => {
+        if (!isActive) return;
+        setCameraError(
+          window.isSecureContext
+            ? 'Camera access is not available in this browser. Use Serial search instead.'
+            : 'Camera access requires a secure HTTPS connection. Use Serial search instead.',
+        );
+        setIsScanning(false);
+      });
+      return () => { isActive = false; };
+    }
+
+    let isActive = true;
+    let hasDecoded = false;
+    let scannerControls: { stop: () => void } | undefined;
+    const reader = new BrowserQRCodeReader();
+    const video = videoRef.current;
+
+    reader.decodeFromConstraints(
+      { video: { facingMode: { ideal: 'environment' } }, audio: false },
+      video,
+      (result, _error, controls) => {
+        scannerControls = controls;
+        if (!isActive || hasDecoded || !result) return;
+        hasDecoded = true;
+        controls.stop();
+        setIsScanning(false);
+        void searchDevice(result.getText());
+      },
+    ).then((controls) => {
+      scannerControls = controls;
+      if (isActive) {
+        setIsScanning(true);
+      } else {
+        controls.stop();
+      }
+    }).catch((error: unknown) => {
+      if (!isActive) return;
+      setIsScanning(false);
+      const errorName = error instanceof DOMException ? error.name : '';
+      const message = !window.isSecureContext
+        ? 'Camera access requires HTTPS. Open the secure production URL or use Serial search.'
+        : errorName === 'NotAllowedError'
+          ? 'Camera permission is blocked. Allow camera access in your browser settings, then retry.'
+          : errorName === 'NotFoundError'
+            ? 'No camera was found on this device. Use Serial search instead.'
+            : 'Could not start the camera. Check browser camera permission or use Serial search.';
+      setCameraError(message);
+      showToast(message, 'error');
+    });
+
+    return () => {
+      isActive = false;
+      scannerControls?.stop();
+    };
+  }, [scanTab, isModalOpen, isSearching, cameraAttempt, searchDevice, showToast]);
 
   const handleSerialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,7 +292,11 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
           {scanTabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setScanTab(id)}
+              onClick={() => {
+                setCameraError(null);
+                setScanTab(id);
+                if (id === 'CAMERA') setCameraAttempt((attempt) => attempt + 1);
+              }}
               className={`flex flex-1 items-center justify-center gap-2 border-b-2 py-3 text-xs font-semibold transition-colors ${
                 scanTab === id
                   ? 'border-[var(--cg-primary)] text-[var(--cg-primary)] bg-[var(--cg-surface-muted)]'
@@ -263,20 +318,20 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
                 autoPlay
                 playsInline
                 muted
-                className="absolute inset-0 h-full w-full object-cover opacity-60"
+                className="absolute inset-0 h-full w-full object-cover"
               />
+              <div className="absolute left-3 right-3 top-3 z-10 flex justify-center">
+                <span className="rounded bg-black/70 px-2.5 py-1 text-[10px] font-mono text-white">
+                  {isSearching ? 'READING QR…' : isScanning ? `SCANNING · ${currentGate.code}` : 'CAMERA PAUSED'}
+                </span>
+              </div>
               {isScanning && (
                 <div className="absolute inset-x-8 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-[var(--cg-primary)] to-transparent animate-pulse pointer-events-none -translate-y-8" />
               )}
-              <div className="relative z-10 h-52 w-52 border-2 border-white/40 rounded-xl flex flex-col justify-between p-3 pointer-events-none">
+              <div className="pointer-events-none relative z-10 flex h-52 w-52 flex-col justify-between rounded-xl border-2 border-white/40 p-3">
                 <div className="flex justify-between">
                   <div className="h-5 w-5 border-t-4 border-l-4 border-white rounded-tl-sm" />
                   <div className="h-5 w-5 border-t-4 border-r-4 border-white rounded-tr-sm" />
-                </div>
-                <div className="text-center">
-                  <span className="rounded border border-white/30 bg-black/60 px-2 py-0.5 text-[10px] font-mono text-white/80">
-                    SCANNER READY · {currentGate.code}
-                  </span>
                 </div>
                 <div className="flex justify-between">
                   <div className="h-5 w-5 border-b-4 border-l-4 border-white rounded-bl-sm" />
@@ -293,6 +348,21 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onNavigateToEnroll
               )}
             </div>
             <p className="text-center text-xs text-[var(--cg-text-muted)]">{t('pointCameraAtQr')}</p>
+            {cameraError && (
+              <div role="alert" className="rounded-lg border border-[var(--cg-warning-border)] bg-[var(--cg-warning-bg)] p-3 text-center text-xs leading-relaxed text-[var(--cg-warning)]">
+                {cameraError}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCameraError(null);
+                    setCameraAttempt((attempt) => attempt + 1);
+                  }}
+                  className="ml-2 font-semibold underline underline-offset-2"
+                >
+                  Retry camera
+                </button>
+              </div>
+            )}
           </div>
         )}
 
