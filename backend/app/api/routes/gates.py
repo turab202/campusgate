@@ -1,5 +1,5 @@
 """
-GET  /api/v1/gates  — Admin only.
+GET  /api/v1/gates  — Admin sees all gates; gate officers see their current assigned gate.
 POST /api/v1/gates  — Admin only.
 """
 from typing import Annotated
@@ -14,6 +14,7 @@ from app.models.enums import UserRole
 from app.models.gate import Gate
 from app.models.user import User
 from app.schemas.gate import GateCreate, GateRead
+from app.services.assignment_service import get_active_gate
 
 router = APIRouter(prefix="/gates", tags=["gates"])
 
@@ -27,11 +28,18 @@ def _require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
     return user
 
 
-@router.get("", response_model=list[GateRead], summary="List all gates")
+@router.get("", response_model=list[GateRead], summary="List gates available to the current role")
 def list_gates(
     db: Session = Depends(get_db),
-    _: User = Depends(_require_admin),
+    actor: User = Depends(get_current_user),
 ):
+    if actor.role == UserRole.GATE_OFFICER:
+        return [get_active_gate(db, actor)]
+    if actor.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrators and gate officers only",
+        )
     return db.execute(select(Gate).order_by(Gate.created_at)).scalars().all()
 
 
