@@ -37,13 +37,13 @@ const AppContent: React.FC = () => {
 
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
         {role === 'OFFICER' && <OfficerMain />}
         {role === 'STUDENT' && <StudentView />}
         {role === 'ADMIN' && <AdminDashboard />}
       </main>
 
-      <footer className="border-t border-[var(--cg-border)] bg-[var(--cg-surface)] py-5 px-4 mt-12">
+      <footer className="mt-6 border-t border-[var(--cg-border)] bg-[var(--cg-surface)] px-4 py-3 sm:mt-8 sm:py-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm">
             <span className="font-semibold text-[var(--cg-text)]">CampusGate</span>

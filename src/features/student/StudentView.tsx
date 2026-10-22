@@ -125,7 +125,7 @@ export const StudentView: React.FC = () => {
   ];
 
   return (
-    <div className="flex min-h-[calc(100dvh-56px)]">
+    <div className="flex">
 
       {/* ── Sidebar ── */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-[var(--cg-border)] bg-[var(--cg-surface)] overflow-y-auto">

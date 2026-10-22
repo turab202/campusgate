@@ -154,7 +154,8 @@ export const QRPassModal: React.FC<QRPassModalProps> = ({ device, isOpen, onClos
               className="inline-flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-1.5 py-2 text-[10px] font-semibold text-[var(--cg-text)] transition-colors hover:bg-[var(--cg-surface-muted)] sm:gap-1.5 sm:px-2.5 sm:text-xs"
             >
               <Printer className="h-3.5 w-3.5 shrink-0" />
-              <span className="whitespace-nowrap">{language === 'am' ? t('printQr') : 'Print QR'}</span>
+              <span className="whitespace-nowrap sm:hidden">Print</span>
+              <span className="hidden whitespace-nowrap sm:inline">{language === 'am' ? t('printQr') : 'Print QR'}</span>
             </button>
             <button
               onClick={handleDownload}
@@ -163,7 +164,8 @@ export const QRPassModal: React.FC<QRPassModalProps> = ({ device, isOpen, onClos
               className="inline-flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-1.5 py-2 text-[10px] font-semibold text-[var(--cg-text)] transition-colors hover:bg-[var(--cg-surface-muted)] sm:gap-1.5 sm:px-2.5 sm:text-xs"
             >
               <Download className="h-3.5 w-3.5 shrink-0" />
-              <span className="whitespace-nowrap">{language === 'am' ? t('downloadQr') : 'Download QR'}</span>
+              <span className="whitespace-nowrap sm:hidden">Save</span>
+              <span className="hidden whitespace-nowrap sm:inline">{language === 'am' ? t('downloadQr') : 'Download QR'}</span>
             </button>
           <button
             onClick={onClose}
