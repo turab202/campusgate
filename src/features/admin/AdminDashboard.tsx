@@ -274,13 +274,16 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cg-text-muted)]">Campus operations</p>
                 <h1 className="mt-1 text-lg font-bold text-[var(--cg-text)]">{t('adminDashboardTitle')}</h1>
               </div>
-              <button
+              <Button
                 onClick={() => showToast('Report export queued.', 'info')}
-                className="flex items-center gap-1.5 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-xs font-semibold text-[var(--cg-text)] transition-colors hover:bg-[var(--cg-border)]"
+                variant="secondary"
+                size="sm"
+                icon={<Download className="h-3.5 w-3.5" />}
+                centeredLabel
+                className="min-w-40"
               >
-                <Download className="h-3.5 w-3.5" />
                 {t('exportPdf')}
-              </button>
+              </Button>
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
@@ -538,7 +541,13 @@ export const AdminDashboard: React.FC = () => {
                   className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10" />
               </div>
               <div className="sm:col-span-2 xl:col-span-3 flex justify-end">
-                <Button type="submit" disabled={submitting} icon={<Plus className="h-4 w-4" />} className="w-full sm:w-auto sm:min-w-40">
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  icon={<Plus className="h-4 w-4" />}
+                  centeredLabel
+                  className="w-full sm:w-auto sm:min-w-40"
+                >
                   {submitting ? 'Creating gate…' : 'Create gate'}
                 </Button>
               </div>
@@ -630,7 +639,7 @@ export const AdminDashboard: React.FC = () => {
                   className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10" />
               </div>
               <div className="sm:col-span-2 flex justify-end">
-                <Button type="submit" disabled={submitting || !assignOfficerId || !assignGateId || !assignStart} className="w-full sm:w-auto sm:min-w-44">
+                <Button type="submit" disabled={submitting || !assignOfficerId || !assignGateId || !assignStart} centeredLabel className="w-full sm:w-auto sm:min-w-44">
                   {submitting ? 'Assigning officer…' : 'Assign officer'}
                 </Button>
               </div>
@@ -676,11 +685,17 @@ export const AdminDashboard: React.FC = () => {
               <h2 className="text-sm font-bold text-[var(--cg-text)]">{t('auditTrail')}</h2>
               <p className="mt-0.5 text-xs text-[var(--cg-text-muted)]">Immutable audit event generated on every security operation.</p>
             </div>
-            <button onClick={loadAudit} disabled={auditLoading}
-              className="flex items-center gap-1.5 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface-muted)] px-3 py-2 text-xs font-semibold text-[var(--cg-text)] hover:bg-[var(--cg-border)] transition-colors disabled:opacity-50">
-              <RefreshCw className={`h-3.5 w-3.5 ${auditLoading ? 'animate-spin' : ''}`} />
+            <Button
+              onClick={loadAudit}
+              disabled={auditLoading}
+              variant="secondary"
+              size="sm"
+              icon={<RefreshCw className={`h-3.5 w-3.5 ${auditLoading ? 'animate-spin' : ''}`} />}
+              centeredLabel
+              className="min-w-28"
+            >
               Refresh
-            </button>
+            </Button>
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-sm)]">

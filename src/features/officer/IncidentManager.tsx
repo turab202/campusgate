@@ -119,10 +119,10 @@ export const IncidentManager: React.FC = () => {
           <button
             onClick={() => setShowCreateModal(true)}
             disabled={role === 'OFFICER' && !currentGate.id}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-[var(--cg-danger)] px-4 py-2.5 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+            className="relative flex shrink-0 items-center justify-center rounded-lg bg-[var(--cg-danger)] px-4 py-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
           >
-            <Plus className="h-4 w-4" />
-            {t('createIncident')}
+            <Plus aria-hidden="true" className="absolute left-4 h-4 w-4" />
+            <span className="w-full text-center">{t('createIncident')}</span>
           </button>
         </div>
         {role === 'OFFICER' && currentGate.id && (

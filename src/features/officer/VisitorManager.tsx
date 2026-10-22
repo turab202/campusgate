@@ -244,12 +244,14 @@ export const VisitorManager: React.FC = () => {
                 {isAdmin && vis.status === 'PENDING' && (
                   <div className="flex gap-2">
                     <button onClick={() => handleReview(vis.id, true)} disabled={busyVisitId === vis.id}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--cg-success)] py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60">
-                      <Check className="h-3.5 w-3.5" /> Approve
+                      className="relative flex flex-1 items-center justify-center rounded-lg bg-[var(--cg-success)] py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60">
+                      <Check aria-hidden="true" className="absolute left-3 h-3.5 w-3.5" />
+                      <span className="w-full text-center">Approve</span>
                     </button>
                     <button onClick={() => handleReview(vis.id, false)} disabled={busyVisitId === vis.id}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--cg-danger)] py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60">
-                      <X className="h-3.5 w-3.5" /> Reject
+                      className="relative flex flex-1 items-center justify-center rounded-lg bg-[var(--cg-danger)] py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60">
+                      <X aria-hidden="true" className="absolute left-3 h-3.5 w-3.5" />
+                      <span className="w-full text-center">Reject</span>
                     </button>
                   </div>
                 )}

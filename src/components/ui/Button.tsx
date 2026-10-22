@@ -8,6 +8,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   fullWidth?: boolean;
   icon?: React.ReactNode;
+  centeredLabel?: boolean;
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -28,6 +29,7 @@ export function Button({
   size = 'md',
   fullWidth = false,
   icon,
+  centeredLabel = false,
   className = '',
   children,
   type = 'button',
@@ -38,6 +40,7 @@ export function Button({
       type={type}
       className={[
         'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
+        centeredLabel ? 'relative' : '',
         variantClasses[variant],
         sizeClasses[size],
         fullWidth ? 'w-full' : '',
@@ -45,8 +48,10 @@ export function Button({
       ].join(' ')}
       {...props}
     >
-      {icon ? <span className="shrink-0">{icon}</span> : null}
-      {children}
+      {icon ? (
+        <span className={centeredLabel ? 'absolute left-4 shrink-0' : 'shrink-0'}>{icon}</span>
+      ) : null}
+      {centeredLabel ? <span className="w-full text-center">{children}</span> : children}
     </button>
   );
 }
