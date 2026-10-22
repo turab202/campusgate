@@ -1,11 +1,11 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { translations, Language } from '../i18n/translations';
 import { Gate, GateOfficer, Student, UserRole } from '../types';
 import { campusStore } from '../services/storage';
 import { AuthUser, BackendRole, loginApi, logoutApi, meApi, meToAuthUser } from '../services/authService';
-import { ApiError } from '../services/api';
+import { ApiError, SESSION_EXPIRED_EVENT } from '../services/api';
 import { GateAssignmentRead, getCurrentAssignmentApi, listGatesApi } from '../services/gateService';
 import { listMovementsApi } from '../services/movementService';
 
@@ -133,6 +133,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const sessionExpiryHandled = useRef(false);
 
   // ── Language ─────────────────────────────────────────────────────────────
   const [language, setLanguageState] = useState<Language>(
@@ -277,6 +278,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTimeout(() => setToast(null), 4500);
   }, []);
 
+  useEffect(() => {
+    if (!authUser) return;
+
+    const handleSessionExpired = () => {
+      if (sessionExpiryHandled.current) return;
+      sessionExpiryHandled.current = true;
+      setAuthUser(null);
+      setAuthError('Your session expired. Please sign in again.');
+      void logoutApi().catch(() => undefined);
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, [authUser]);
+
   // ── Role side-effects ─────────────────────────────────────────────────────
   const applyRoleSideEffects = useCallback((r: UserRole) => {
     if (r === 'OFFICER') {
@@ -310,6 +326,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await loginApi(email, password);
       const me = await meApi();
       const user = meToAuthUser(me);
+      sessionExpiryHandled.current = false;
       setAuthUser(user);
       applyRoleSideEffects(toFrontendRole(user.role));
       showToast(`Welcome, ${user.name}`, 'success');

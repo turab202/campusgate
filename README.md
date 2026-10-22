@@ -188,6 +188,8 @@ JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
+The access token and its HttpOnly browser cookie expire after this interval. The default is 60 minutes; there is no automatic token refresh, so users must sign in again when it expires. The frontend returns to the sign-in page and explains this when an API request receives an expired-session response. Increase this value in the backend deployment environment only if a longer session is appropriate for your device-security policy.
+
 If you connect to a managed PostgreSQL service instead of the Docker local database, replace the URL with the correct connection string.
 
 For production, set `ENVIRONMENT=production` and use a unique randomly generated `JWT_SECRET_KEY`. The default CORS origin is `https://campusgate-omega.vercel.app`; set `CORS_ORIGINS` to a JSON array of exact HTTPS origins if you use another frontend domain. API documentation endpoints are disabled in production.

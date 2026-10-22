@@ -7,6 +7,7 @@
  */
 
 const BASE = '/api/v1';
+export const SESSION_EXPIRED_EVENT = 'cg:session-expired';
 
 // ---------------------------------------------------------------------------
 // Error type
@@ -72,6 +73,9 @@ async function request<T>(
       responseBody,
       `Request failed with status ${res.status}`,
     );
+    if (res.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
     throw new ApiError(res.status, message, responseBody);
   }
 
