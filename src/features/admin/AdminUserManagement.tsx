@@ -241,12 +241,12 @@ export function AdminUserManagement() {
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-                  <Button type="button" variant="secondary" size="sm" icon={<Pencil className="h-3.5 w-3.5" />} centeredLabel onClick={() => beginEdit(user)}>
+                  <Button type="button" variant="secondary" size="sm" icon={<Pencil className="h-3.5 w-3.5" />} onClick={() => beginEdit(user)}>
                     Edit
                   </Button>
                   <Button type="button" variant={user.is_active ? 'danger' : 'secondary'} size="sm"
                     icon={user.is_active ? <UserX className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                    centeredLabel onClick={() => void handleActiveChange(user)}>
+                    onClick={() => void handleActiveChange(user)}>
                     {user.is_active ? 'Deactivate' : 'Reactivate'}
                   </Button>
                 </div>
