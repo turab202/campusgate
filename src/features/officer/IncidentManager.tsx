@@ -99,34 +99,39 @@ export const IncidentManager: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-4 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-[var(--cg-text)]">{t('navIncidents')}</h2>
-          <p className="mt-0.5 text-xs text-[var(--cg-text-muted)]">
-            {language === 'am'
-              ? 'የደህንነት ስጋቶች እና አለመጣጣሞች ሪፖርት'
-              : 'Security incidents, flag alerts, and unauthorized gate crossing records.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={load}
-            disabled={loading}
-            className="flex items-center gap-1.5 h-9 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)] transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            disabled={role === 'OFFICER' && !currentGate.id}
-            className="relative flex shrink-0 items-center justify-center rounded-lg bg-[var(--cg-danger)] px-4 py-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            <Plus aria-hidden="true" className="absolute left-4 h-4 w-4" />
-            <span className="w-full text-center">{t('createIncident')}</span>
-          </button>
+      <div className="flex flex-col gap-4 rounded-xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold text-[var(--cg-text)]">{t('navIncidents')}</h2>
+            <p className="mt-0.5 text-xs text-[var(--cg-text-muted)]">
+              {language === 'am'
+                ? 'የደህንነት ስጋቶች እና አለመጣጣሞች ሪፖርት'
+                : 'Security incidents, flag alerts, and unauthorized gate crossing records.'}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={load}
+              disabled={loading}
+              aria-label="Refresh incidents"
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] text-[var(--cg-text-muted)] transition-colors hover:bg-[var(--cg-surface-muted)] disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              disabled={role === 'OFFICER' && !currentGate.id}
+              className="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[var(--cg-danger)] px-4 py-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <Plus aria-hidden="true" className="h-4 w-4 shrink-0" />
+              <span>{t('createIncident')}</span>
+            </button>
+          </div>
         </div>
         {role === 'OFFICER' && currentGate.id && (
-          <p className="text-xs text-[var(--cg-text-muted)]">Reports created here are recorded at {currentGate.name}. Incident status is managed by administrators.</p>
+          <p className="border-t border-[var(--cg-border)] pt-3 text-xs leading-relaxed text-[var(--cg-text-muted)]">
+            Reports created here are recorded at {currentGate.name}. Incident status is managed by administrators.
+          </p>
         )}
       </div>
 
