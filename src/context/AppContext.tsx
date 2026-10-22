@@ -49,6 +49,7 @@ interface AppContextType {
   isGateContextLoading: boolean;
   authError: string | null;
   login: (email: string, password: string) => Promise<boolean>;
+  syncAuthUser: (user: AuthUser) => void;
   logout: () => void;
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -291,6 +292,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const syncAuthUser = (user: AuthUser) => setAuthUser(user);
+
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = () => {
     setAuthUser(null);
@@ -337,7 +340,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{
       role, currentUser, authUser, isAuthenticated, isAuthLoading, isGateContextLoading, authError,
-      login, logout,
+      login, syncAuthUser, logout,
       language, setLanguage, t,
       currentGate, activeOfficer, currentStudent,
       isOffline, setIsOffline,

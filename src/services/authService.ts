@@ -88,3 +88,15 @@ export async function logoutApi(): Promise<void> {
 export async function meApi(): Promise<MeResponse> {
   return api.get<MeResponse>('/auth/me');
 }
+
+export interface UpdateStudentCredentialsRequest {
+  current_password: string;
+  email?: string;
+  new_password?: string;
+}
+
+export async function updateStudentCredentialsApi(
+  payload: UpdateStudentCredentialsRequest,
+): Promise<MeResponse> {
+  return api.patch<MeResponse>('/auth/me/credentials', payload);
+}

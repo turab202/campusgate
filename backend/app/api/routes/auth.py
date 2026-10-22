@@ -1,17 +1,25 @@
 import secrets
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.deps import CurrentUser
+from app.core.security import hash_password, verify_password
 from app.core.security import create_access_token
 from app.db.session import get_db
+from app.models.audit_log import AuditLog
 from app.models.enums import UserRole
 from app.models.user import User
-from app.schemas.auth import BootstrapRequest, LoginRequest, MeResponse, TokenResponse
+from app.schemas.auth import (
+    BootstrapRequest,
+    LoginRequest,
+    MeResponse,
+    StudentCredentialUpdate,
+    TokenResponse,
+)
 from app.schemas.user import UserCreate
 from app.services.user_service import authenticate_user, create_users
 
@@ -91,4 +99,61 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=MeResponse)
 def me(current_user: CurrentUser):
+    return current_user
+
+
+@router.patch("/me/credentials", response_model=MeResponse)
+def update_student_credentials(
+    body: StudentCredentialUpdate,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only student accounts can update credentials here",
+        )
+    if not verify_password(body.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    changed_fields: list[str] = []
+    if body.email is not None:
+        email = str(body.email).strip().lower()
+        duplicate = db.execute(
+            select(User.id).where(
+                func.lower(User.email) == email,
+                User.id != current_user.id,
+            )
+        ).first()
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email is already registered",
+            )
+        current_user.email = email
+        changed_fields.append("email")
+
+    if body.new_password is not None:
+        current_user.password_hash = hash_password(body.new_password)
+        changed_fields.append("password")
+
+    db.add(AuditLog(
+        actor_id=current_user.id,
+        action="STUDENT_CREDENTIALS_UPDATED",
+        entity_type="user",
+        entity_id=str(current_user.id),
+        description=f"Student updated credentials: {', '.join(changed_fields)}.",
+    ))
+    try:
+        db.commit()
+        db.refresh(current_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already registered",
+        ) from None
     return current_user

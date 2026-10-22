@@ -132,6 +132,7 @@ The project uses backend authorization as the source of truth.
 - View their own devices
 - View their own device movement history
 - Use student-facing device actions
+- Update their sign-in email and password from the Account section after confirming their current password
 
 ### Gate officer
 

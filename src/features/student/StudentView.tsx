@@ -13,6 +13,7 @@ import { listDevicesApi, reportLostApi, DeviceRead } from '../../services/device
 import { getDeviceMovementsApi, DeviceMovementRead } from '../../services/movementService';
 import { ApiError } from '../../services/api';
 import { VisitorRequests } from './VisitorRequests';
+import { StudentAccountSettings } from './StudentAccountSettings';
 
 /** Map backend DeviceRead to the frontend Device shape used by QRPassModal. */
 function toFrontendDevice(d: DeviceRead): Device {
@@ -37,7 +38,7 @@ function toFrontendDevice(d: DeviceRead): Device {
 
 export const StudentView: React.FC = () => {
   const { t, language, currentStudent, authUser, showToast } = useApp();
-  const [activeTab, setActiveTab] = useState<'DEVICES' | 'HISTORY' | 'VISITORS'>('DEVICES');
+  const [activeTab, setActiveTab] = useState<'DEVICES' | 'HISTORY' | 'VISITORS' | 'ACCOUNT'>('DEVICES');
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<Device | null>(null);
   const [deviceToReportLost, setDeviceToReportLost] = useState<Device | null>(null);
 
@@ -120,6 +121,7 @@ export const StudentView: React.FC = () => {
     { id: 'DEVICES' as const, label: t('navMyDevices'), icon: Package, count: devices.length, desc: 'Enrolled devices' },
     { id: 'HISTORY' as const, label: t('navHistory'), icon: Clock, count: apiMovements.length, desc: 'Movement timeline' },
     { id: 'VISITORS' as const, label: 'Visitors', icon: Users, count: 0, desc: 'Visitor pass requests' },
+    { id: 'ACCOUNT' as const, label: 'Account', icon: Shield, count: 0, desc: 'Email and password' },
   ];
 
   return (
@@ -379,6 +381,7 @@ export const StudentView: React.FC = () => {
           )}
 
           {activeTab === 'VISITORS' && <VisitorRequests />}
+          {activeTab === 'ACCOUNT' && <StudentAccountSettings />}
 
         </div>
       </div>

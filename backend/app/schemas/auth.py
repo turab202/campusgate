@@ -44,6 +44,32 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class StudentCredentialUpdate(BaseModel):
+    current_password: str = Field(min_length=1, max_length=72)
+    email: EmailStr | None = None
+    new_password: str | None = Field(default=None, min_length=6, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_within_bcrypt_byte_limit(cls, value: str | None) -> str | None:
+        if value is not None and len(value.encode("utf-8")) > 72:
+            raise ValueError("new_password must be at most 72 UTF-8 bytes")
+        return value
+
+    @field_validator("current_password")
+    @classmethod
+    def current_password_within_bcrypt_byte_limit(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("current_password must be at most 72 UTF-8 bytes")
+        return value
+
+    @model_validator(mode="after")
+    def require_credential_change(self):
+        if self.email is None and self.new_password is None:
+            raise ValueError("Provide a new email, a new password, or both")
+        return self
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
