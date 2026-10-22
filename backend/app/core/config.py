@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    BOOTSTRAP_SECRET: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -70,6 +71,15 @@ class Settings(BaseSettings):
         if info.data.get("ENVIRONMENT", "development").lower() == "production":
             if len(secret.encode("utf-8")) < 32 or "replace-with" in secret.lower() or secret.startswith("<"):
                 raise ValueError("production JWT_SECRET_KEY must be a non-placeholder secret of at least 32 bytes")
+        return secret
+
+    @field_validator("BOOTSTRAP_SECRET", mode="before")
+    @classmethod
+    def bootstrap_secret_must_be_strong(cls, secret: str | None) -> str | None:
+        if secret is None or secret == "":
+            return None
+        if secret is not None and len(secret.encode("utf-8")) < 32:
+            raise ValueError("BOOTSTRAP_SECRET must be at least 32 bytes")
         return secret
 
 

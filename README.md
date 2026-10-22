@@ -190,6 +190,18 @@ For production, set `ENVIRONMENT=production` and use a unique randomly generated
 
 Configure the frontend deployment with `BACKEND_API_URL` set to the backend origin, for example `https://campusgate-api-f27v.onrender.com` (no trailing slash). Browser API calls go through the same-origin Next.js proxy, which stores the backend JWT in an HttpOnly cookie instead of exposing it to client JavaScript. Existing browser sessions must sign in again after this change.
 
+### Create the first production Admin and Gate Officer (Render without shell)
+
+Public registration is limited to Student and Staff. To create the initial privileged accounts on a Render deployment without shell access:
+
+1. Deploy the backend changes from this repository.
+2. In Render, open the backend service's Environment settings and temporarily add `BOOTSTRAP_SECRET`. Generate a unique value locally with `python -c "import secrets; print(secrets.token_urlsafe(48))"` and set it as the variable. Keep it private; it must be at least 32 bytes.
+3. After Render redeploys, run `python backend/bootstrap_render_users.py` from your computer. Enter the backend service's HTTPS origin (not the Vercel frontend URL), the secret, the two account names/emails, and separate passwords of at least 16 characters when prompted. Passwords and the secret are not echoed or saved by the helper.
+4. After the helper confirms creation, remove `BOOTSTRAP_SECRET` from Render and redeploy immediately. The API also closes bootstrap permanently once any Admin or Gate Officer exists.
+5. Sign in at the frontend using each account's email and password.
+
+The bootstrap API creates both accounts atomically and refuses existing privileged users or duplicate emails. The local helper requires HTTPS and does not follow redirects. Do not put the bootstrap secret or passwords in source control, chat, or a URL.
+
 ### 4. Create and activate a Python virtual environment
 
 ```bash
