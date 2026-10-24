@@ -133,6 +133,7 @@ def test_admin_can_update_managed_user_and_password_is_hashed(monkeypatch):
         body=ManagedUserUpdate(
             full_name="Updated Officer",
             email="UPDATED@example.com",
+            role=UserRole.PROCTOR,
             password="a-strong-password-123",
         ),
         db=db,
@@ -141,6 +142,8 @@ def test_admin_can_update_managed_user_and_password_is_hashed(monkeypatch):
 
     assert result.full_name == "Updated Officer"
     assert result.email == "updated@example.com"
+    assert result.role == UserRole.PROCTOR
+    assert result.department is None
     assert result.password_hash == "hashed:a-strong-password-123"
 
 

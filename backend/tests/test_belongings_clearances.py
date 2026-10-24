@@ -58,7 +58,7 @@ def db(db_engine):
     connection.close()
 
 
-def make_user(db, role: UserRole, *, department: str = "Engineering", active: bool = True) -> User:
+def make_user(db, role: UserRole, *, department: str | None = "Engineering", active: bool = True) -> User:
     user = User(
         full_name=f"{role.value.title()} {uuid.uuid4().hex[:8]}",
         email=f"{uuid.uuid4().hex}@example.edu",
@@ -124,19 +124,18 @@ def test_admin_can_create_proctor_account_and_account_has_no_hash(db):
     response = client.post(
         "/api/v1/users/managed",
         json={
-            "full_name": "Department Proctor",
+            "full_name": "Proctor",
             "email": email,
             "password": password,
             "role": "PROCTOR",
             "phone": "+1-555-0100",
-            "department": "Engineering",
         },
         headers=auth(admin),
     )
 
     assert response.status_code == 201
     assert response.json()["role"] == "PROCTOR"
-    assert response.json()["department"] == "Engineering"
+    assert response.json()["department"] is None
     assert response.json()["phone"] == "+1-555-0100"
     assert "password_hash" not in response.text
     assert "password" not in response.json()
@@ -184,15 +183,25 @@ def test_students_cannot_create_privileged_accounts_or_access_proctor_routes(db)
         assert promote.status_code == 403
 
 
-def test_proctor_creation_requires_a_department_and_public_registration_cannot_grant_role(db):
+def test_managed_officers_and_proctors_do_not_require_department_and_public_registration_cannot_grant_role(db):
     admin = make_user(db, UserRole.ADMIN)
-    missing_department = client.post(
+    proctor_response = client.post(
         "/api/v1/users/managed",
         json={
             "full_name": "Unassigned Proctor",
             "email": f"{uuid.uuid4().hex}@example.edu",
             "password": "a-very-strong-password-123",
             "role": "PROCTOR",
+        },
+        headers=auth(admin),
+    )
+    officer_response = client.post(
+        "/api/v1/users/managed",
+        json={
+            "full_name": "Unassigned Gate Officer",
+            "email": f"{uuid.uuid4().hex}@example.edu",
+            "password": "a-very-strong-password-123",
+            "role": "GATE_OFFICER",
         },
         headers=auth(admin),
     )
@@ -208,7 +217,10 @@ def test_proctor_creation_requires_a_department_and_public_registration_cannot_g
         },
     )
 
-    assert missing_department.status_code == 422
+    assert proctor_response.status_code == 201
+    assert proctor_response.json()["department"] is None
+    assert officer_response.status_code == 201
+    assert officer_response.json()["department"] is None
     assert public_registration.status_code == 422
 
 
@@ -273,42 +285,41 @@ def test_student_request_submission_key_makes_retries_idempotent(db):
     assert retry.json()["dormitory"] == "North Residence"
 
 
-def test_proctor_scope_rejects_another_department_and_reject_reason_is_required(db):
-    student = make_user(db, UserRole.STUDENT)
-    other_proctor = make_user(db, UserRole.PROCTOR, department="Arts")
+def test_department_free_proctor_can_review_all_requests_and_reject_reason_is_required(db):
+    student = make_user(db, UserRole.STUDENT, department="Engineering")
+    other_student = make_user(db, UserRole.STUDENT, department="Arts")
+    proctor = make_user(db, UserRole.PROCTOR, department=None)
     created = create_request(student)
+    other_created = create_request(other_student)
     clearance_id = created.json()["id"]
-
-    get_out_of_scope = client.get(
-        f"/api/v1/belongings-clearances/proctor/{clearance_id}",
-        headers=auth(other_proctor),
+    proctor_headers = auth(proctor)
+    listed = client.get(
+        "/api/v1/belongings-clearances/proctor",
+        headers=proctor_headers,
     )
-    approve_out_of_scope = client.post(
-        f"/api/v1/belongings-clearances/proctor/{clearance_id}/approve",
-        headers=auth(other_proctor),
+    readable = client.get(
+        f"/api/v1/belongings-clearances/proctor/{other_created.json()['id']}",
+        headers=proctor_headers,
     )
-
-    assert get_out_of_scope.status_code == 404
-    assert approve_out_of_scope.status_code == 404
-
-    proctor = make_user(db, UserRole.PROCTOR)
+    assert {item["student_department"] for item in listed.json()} >= {"Engineering", "Arts"}
+    assert readable.status_code == 200
     rejected = client.post(
         f"/api/v1/belongings-clearances/proctor/{clearance_id}/reject",
         json={"reason": " "},
-        headers=auth(proctor),
+        headers=proctor_headers,
     )
     assert rejected.status_code == 422
     rejected = client.post(
         f"/api/v1/belongings-clearances/proctor/{clearance_id}/reject",
         json={"reason": "Please correct the quantities."},
-        headers=auth(proctor),
+        headers=proctor_headers,
     )
     assert rejected.status_code == 200
     assert rejected.json()["decision_reason"] == "Please correct the quantities."
     assert rejected.json()["pass_state"] == "REJECTED"
     assert client.post(
         f"/api/v1/belongings-clearances/proctor/{clearance_id}/approve",
-        headers=auth(proctor),
+        headers=proctor_headers,
     ).status_code == 409
 
 

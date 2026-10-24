@@ -91,7 +91,6 @@ def create_managed_user(
             full_name=body.full_name,
             email=email,
             phone=body.phone,
-            department=body.department.strip() if body.department else None,
             password_hash=hash_password(body.password),
             role=body.role,
             campus_id=body.campus_id.strip() if body.campus_id else None,
@@ -142,12 +141,6 @@ def update_managed_user(
         )
 
     next_role = changes.get("role", user.role)
-    next_department = changes.get("department", user.department)
-    if next_role == UserRole.PROCTOR and not (next_department and next_department.strip()):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Proctor accounts must be assigned a department",
-        )
     next_active = changes.get("is_active", user.is_active)
     if user.is_active and user.role == UserRole.ADMIN and (
         next_role != UserRole.ADMIN or not next_active
@@ -178,9 +171,6 @@ def update_managed_user(
         if duplicate:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
         changes["email"] = normalized_email
-    if "department" in changes:
-        changes["department"] = changes["department"].strip()
-
     password = changes.pop("password", None)
     if password is not None:
         changes["password_hash"] = hash_password(password)

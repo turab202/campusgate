@@ -106,7 +106,7 @@ const roles = [
   {
     name: 'Proctors',
     description:
-      'Review belongings exit-clearance requests for students within their assigned department.',
+      'Review and decide student belongings exit-clearance requests across departments.',
     icon: ClipboardCheck,
   },
   {
@@ -347,7 +347,7 @@ export function CampusLandingPage() {
                   {
                     number: '02',
                     title: 'Proctor reviews the request',
-                    description: 'The assigned department Proctor approves or rejects it with a recorded decision.',
+                    description: 'A Proctor approves or rejects the request with a recorded decision.',
                     icon: ClipboardCheck,
                   },
                   {

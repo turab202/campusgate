@@ -7,7 +7,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -163,16 +163,6 @@ def _to_read(
     )
 
 
-def _proctor_scope(clearance: BelongingsExitClearance, proctor: User) -> None:
-    if not proctor.department or not clearance.student_department:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="A department assignment is required to review this request",
-        )
-    if proctor.department.strip().casefold() != clearance.student_department.strip().casefold():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Clearance request not found")
-
-
 def _get_clearance(
     db: Session,
     clearance_id: uuid.UUID,
@@ -235,17 +225,6 @@ def _gate_validation(clearance: BelongingsExitClearance) -> BelongingsGateRead:
         clearance=_to_read(clearance),
         is_valid=state == "ACTIVE",
         validation_message=messages[state],
-    )
-
-
-def _search_scope_statement(proctor: User):
-    if not proctor.department or not proctor.department.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="A department assignment is required to review clearance requests",
-        )
-    return select(BelongingsExitClearance).where(
-        func.lower(BelongingsExitClearance.student_department) == proctor.department.strip().casefold()
     )
 
 
@@ -408,9 +387,9 @@ def list_proctor_clearances(
     clearance_status: BelongingsClearanceStatus | None = Query(default=None, alias="status"),
     on_date: date | None = Query(default=None),
     db: Session = Depends(get_db),
-    proctor: User = _require_proctor,
+    _proctor: User = _require_proctor,
 ):
-    statement = _search_scope_statement(proctor).options(
+    statement = select(BelongingsExitClearance).options(
         joinedload(BelongingsExitClearance.student),
         joinedload(BelongingsExitClearance.decided_by),
         joinedload(BelongingsExitClearance.items),
@@ -445,10 +424,9 @@ def list_proctor_clearances(
 def get_proctor_clearance(
     clearance_id: uuid.UUID,
     db: Session = Depends(get_db),
-    proctor: User = _require_proctor,
+    _proctor: User = _require_proctor,
 ):
     clearance = _get_clearance(db, clearance_id)
-    _proctor_scope(clearance, proctor)
     return _to_read(clearance)
 
 
@@ -459,7 +437,6 @@ def approve_clearance(
     proctor: User = _require_proctor,
 ):
     clearance = _get_clearance(db, clearance_id, lock=True)
-    _proctor_scope(clearance, proctor)
     now = datetime.now(timezone.utc)
     if clearance.status != BelongingsClearanceStatus.PENDING:
         raise HTTPException(
@@ -501,7 +478,6 @@ def reject_clearance(
     proctor: User = _require_proctor,
 ):
     clearance = _get_clearance(db, clearance_id, lock=True)
-    _proctor_scope(clearance, proctor)
     if clearance.status != BelongingsClearanceStatus.PENDING:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

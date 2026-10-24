@@ -52,7 +52,6 @@ export interface CreateManagedUserRequest {
   password: string;
   role: ManagedRole;
   phone?: string | null;
-  department?: string | null;
   campus_id?: string | null;
 }
 
@@ -63,7 +62,6 @@ export interface UpdateManagedUserRequest {
   password?: string;
   role?: ManagedRole;
   is_active?: boolean;
-  department?: string;
 }
 
 export async function searchUsersApi(query: string): Promise<UserSearchResult[]> {

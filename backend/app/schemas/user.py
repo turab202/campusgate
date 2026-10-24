@@ -66,7 +66,6 @@ class ManagedUserCreate(BaseModel):
     password: str = Field(min_length=16, max_length=72)
     role: UserRole
     phone: str | None = Field(default=None, max_length=50)
-    department: str | None = Field(default=None, max_length=255)
     campus_id: str | None = Field(default=None, max_length=50)
 
     @field_validator("full_name")
@@ -90,12 +89,6 @@ class ManagedUserCreate(BaseModel):
             raise ValueError("Managed accounts must be ADMIN, GATE_OFFICER, or PROCTOR")
         return value
 
-    @model_validator(mode="after")
-    def proctors_need_a_department(self):
-        if self.role == UserRole.PROCTOR and not (self.department and self.department.strip()):
-            raise ValueError("Proctor accounts must be assigned a department")
-        return self
-
 
 class ManagedUserUpdate(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -104,7 +97,6 @@ class ManagedUserUpdate(BaseModel):
     role: UserRole | None = None
     is_active: bool | None = None
     password: str | None = Field(default=None, min_length=16, max_length=72)
-    department: str | None = Field(default=None, max_length=255)
 
     @field_validator("full_name")
     @classmethod
@@ -135,8 +127,6 @@ class ManagedUserUpdate(BaseModel):
             raise ValueError("At least one field must be provided")
         if any(getattr(self, field) is None for field in self.model_fields_set):
             raise ValueError("Updated fields cannot be null")
-        if self.department is not None and not self.department.strip():
-            raise ValueError("department must not be blank")
         if self.phone is not None and not self.phone.strip():
             raise ValueError("phone must not be blank")
         return self
