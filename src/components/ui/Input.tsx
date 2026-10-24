@@ -26,7 +26,7 @@ export function Input({
       <input
         id={fieldId}
         className={[
-          'h-12 w-full rounded-lg border bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition-all duration-200 placeholder:text-slate-400 focus:ring-2 focus:ring-[var(--cg-primary)]/10',
+          'h-10 w-full rounded-lg border bg-[var(--cg-surface)] px-3 text-xs text-[var(--cg-text)] outline-none transition-all duration-200 placeholder:text-slate-400 focus:ring-2 focus:ring-[var(--cg-primary)]/10',
           error ? 'border-[var(--cg-danger)] focus:border-[var(--cg-danger)]' : 'border-[var(--cg-border)] focus:border-[var(--cg-primary)]',
           className
         ].join(' ')}

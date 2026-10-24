@@ -161,7 +161,7 @@ export const VisitorRequests: React.FC = () => {
                   <h3 className="font-semibold text-[var(--cg-text)]">{visit.visitor.full_name}</h3>
                   <p className="mt-1 text-xs text-[var(--cg-text-muted)]">{visit.visitor.purpose || 'No purpose provided'}</p>
                 </div>
-                <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${statusClasses[visit.status]}`}>
+                <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold ${statusClasses[visit.status]}`}>
                   {visit.status.replace(/_/g, ' ')}
                 </span>
               </div>

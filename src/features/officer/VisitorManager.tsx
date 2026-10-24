@@ -137,7 +137,7 @@ export const VisitorManager: React.FC = () => {
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`rounded-lg px-2.5 py-1 text-[10px] font-semibold transition-colors ${
               filterStatus === s
                 ? 'bg-[var(--cg-primary)] text-white'
                 : 'border border-[var(--cg-border)] bg-[var(--cg-surface)] text-[var(--cg-text-muted)] hover:bg-[var(--cg-surface-muted)]'
@@ -155,7 +155,7 @@ export const VisitorManager: React.FC = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by visitor, host, identification, visit ID, or pass code…"
-          className="h-10 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] pl-10 pr-4 text-xs text-[var(--cg-text)] focus:border-[var(--cg-primary)] focus:outline-none"
+          className="h-9 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] pl-9 pr-3 text-[11px] text-[var(--cg-text)] focus:border-[var(--cg-primary)] focus:outline-none"
         />
       </div>
 
@@ -193,7 +193,7 @@ export const VisitorManager: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between border-b border-[var(--cg-border)] pb-3">
                   <span className="font-mono text-xs font-semibold text-[var(--cg-primary)]">{vis.id.slice(0, 8).toUpperCase()}</span>
-                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${statusStyle[vis.status] ?? 'bg-[var(--cg-surface-muted)] text-[var(--cg-text-muted)] border-[var(--cg-border)]'}`}>
+                  <span className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold ${statusStyle[vis.status] ?? 'bg-[var(--cg-surface-muted)] text-[var(--cg-text-muted)] border-[var(--cg-border)]'}`}>
                     {vis.status.replace('_', ' ')}
                   </span>
                 </div>

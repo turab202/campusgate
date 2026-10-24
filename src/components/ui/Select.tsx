@@ -19,7 +19,7 @@ export function Select({ label, helperText, error, className = '', id, children,
       <select
         id={fieldId}
         className={[
-          'w-full rounded-lg border bg-[var(--cg-surface)] px-3.5 py-2.5 text-sm text-[var(--cg-text)] outline-none transition-colors',
+          'w-full rounded-lg border bg-[var(--cg-surface)] px-3 py-2 text-xs text-[var(--cg-text)] outline-none transition-colors',
           error ? 'border-[var(--cg-danger)] focus:border-[var(--cg-danger)]' : 'border-[var(--cg-border)] focus:border-[var(--cg-primary)]',
           className
         ].join(' ')}
