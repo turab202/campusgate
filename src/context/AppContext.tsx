@@ -15,6 +15,7 @@ import { listMovementsApi } from '../services/movementService';
 
 function toFrontendRole(r: BackendRole): UserRole {
   if (r === 'GATE_OFFICER') return 'OFFICER';
+  if (r === 'PROCTOR') return 'PROCTOR';
   if (r === 'ADMIN') return 'ADMIN';
   return 'STUDENT'; // STUDENT + STAFF share the student-facing portal
 }
@@ -302,6 +303,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveTab('student_devices');
     } else if (r === 'ADMIN') {
       setActiveTab('admin_dashboard');
+    } else if (r === 'PROCTOR') {
+      setActiveTab('proctor_clearances');
     }
   }, []);
 

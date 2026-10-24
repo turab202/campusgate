@@ -4,7 +4,7 @@ import { ApiError, api } from './api';
 // Backend response shapes (matching FastAPI schemas)
 // ---------------------------------------------------------------------------
 
-export type BackendRole = 'STUDENT' | 'STAFF' | 'GATE_OFFICER' | 'ADMIN';
+export type BackendRole = 'STUDENT' | 'STAFF' | 'GATE_OFFICER' | 'PROCTOR' | 'ADMIN';
 
 export interface TokenResponse {
   user_id: string;

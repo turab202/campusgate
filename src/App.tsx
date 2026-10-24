@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { OfficerMain } from './features/officer/OfficerMain';
 import { StudentView } from './features/student/StudentView';
 import { AdminDashboard } from './features/admin/AdminDashboard';
+import { ProctorPortal } from './features/proctor/ProctorPortal';
 import { CheckCircle2, AlertTriangle, Info, XCircle } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -41,6 +42,7 @@ const AppContent: React.FC = () => {
         {role === 'OFFICER' && <OfficerMain />}
         {role === 'STUDENT' && <StudentView />}
         {role === 'ADMIN' && <AdminDashboard />}
+        {role === 'PROCTOR' && <ProctorPortal />}
       </main>
 
       <footer className="mt-6 border-t border-[var(--cg-border)] bg-[var(--cg-surface)] px-4 py-3 sm:mt-8 sm:py-4">

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   QrCode, AlertTriangle,
   ArrowUpRight, ArrowDownLeft, MapPin,
-  Package, Clock, TrendingUp, Shield, Users,
+  Package, Clock, TrendingUp, Shield, ClipboardCheck,
   Loader2, GraduationCap
 } from 'lucide-react';
 import { Device } from '../../types';
@@ -12,7 +12,7 @@ import { QRPassModal } from '../../components/QRPassModal';
 import { listDevicesApi, reportLostApi, DeviceRead } from '../../services/deviceService';
 import { getDeviceMovementsApi, DeviceMovementRead } from '../../services/movementService';
 import { ApiError } from '../../services/api';
-import { VisitorRequests } from './VisitorRequests';
+import { BelongingsClearance } from './BelongingsClearance';
 import { StudentAccountSettings } from './StudentAccountSettings';
 
 /** Map backend DeviceRead to the frontend Device shape used by QRPassModal. */
@@ -38,7 +38,7 @@ function toFrontendDevice(d: DeviceRead): Device {
 
 export const StudentView: React.FC = () => {
   const { t, language, currentStudent, authUser, showToast } = useApp();
-  const [activeTab, setActiveTab] = useState<'DEVICES' | 'HISTORY' | 'VISITORS' | 'ACCOUNT'>('DEVICES');
+  const [activeTab, setActiveTab] = useState<'DEVICES' | 'HISTORY' | 'CLEARANCE' | 'ACCOUNT'>('DEVICES');
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState<Device | null>(null);
   const [deviceToReportLost, setDeviceToReportLost] = useState<Device | null>(null);
 
@@ -131,7 +131,9 @@ export const StudentView: React.FC = () => {
   const navItems = [
     { id: 'DEVICES' as const, label: t('navMyDevices'), icon: Package, count: devices.length, desc: 'Enrolled devices' },
     { id: 'HISTORY' as const, label: t('navHistory'), icon: Clock, count: apiMovements.length, desc: 'Movement timeline' },
-    { id: 'VISITORS' as const, label: 'Visitors', icon: Users, count: 0, desc: 'Visitor pass requests' },
+    ...(authUser?.role === 'STUDENT'
+      ? [{ id: 'CLEARANCE' as const, label: 'Belongings Exit Clearance', icon: ClipboardCheck, count: 0, desc: 'Exit permits and declared belongings' }]
+      : []),
     { id: 'ACCOUNT' as const, label: 'Account', icon: Shield, count: 0, desc: 'Email and password' },
   ];
 
@@ -391,7 +393,7 @@ export const StudentView: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'VISITORS' && <VisitorRequests />}
+          {authUser?.role === 'STUDENT' && activeTab === 'CLEARANCE' && <BelongingsClearance />}
           {activeTab === 'ACCOUNT' && <StudentAccountSettings />}
 
         </div>

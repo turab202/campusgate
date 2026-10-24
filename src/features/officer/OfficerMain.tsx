@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Camera, PlusCircle, Clock, Users, ShieldAlert, MapPin, Activity } from 'lucide-react';
+import { Camera, PlusCircle, Clock, Users, ShieldAlert, MapPin, Activity, ClipboardCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DeviceScanner } from './DeviceScanner';
 import { DeviceEnrollment } from './DeviceEnrollment';
 import { GateTransactions } from './GateTransactions';
 import { VisitorManager } from './VisitorManager';
 import { IncidentManager } from './IncidentManager';
+import { BelongingsClearanceScanner } from './BelongingsClearanceScanner';
 
 export const OfficerMain: React.FC = () => {
   const { t, activeTab, setActiveTab, activeOfficer, currentGate, isGateContextLoading, language } = useApp();
@@ -23,6 +24,7 @@ export const OfficerMain: React.FC = () => {
     { id: 'gate_transactions', label: t('navTransactions'), icon: Clock },
     { id: 'gate_visitors', label: t('navVisitors'), icon: Users },
     { id: 'gate_incidents', label: t('navIncidents'), icon: ShieldAlert },
+    { id: 'gate_belongings', label: 'Belongings Exit Clearance', icon: ClipboardCheck },
   ];
 
   return (
@@ -118,6 +120,7 @@ export const OfficerMain: React.FC = () => {
                 {activeTab === 'gate_transactions' && <GateTransactions />}
                 {activeTab === 'gate_visitors' && <VisitorManager />}
                 {activeTab === 'gate_incidents' && <IncidentManager />}
+                {activeTab === 'gate_belongings' && <BelongingsClearanceScanner />}
               </>
             )}
           </div>

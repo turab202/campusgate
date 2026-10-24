@@ -1,6 +1,6 @@
 export type { Language } from '../i18n/translations';
 
-export type UserRole = 'STUDENT' | 'OFFICER' | 'ADMIN';
+export type UserRole = 'STUDENT' | 'OFFICER' | 'PROCTOR' | 'ADMIN';
 
 export type DeviceStatus = 'INSIDE_CAMPUS' | 'OUTSIDE_CAMPUS' | 'LOST' | 'REPORTED_LOST' | 'MAINTENANCE';
 

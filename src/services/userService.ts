@@ -31,7 +31,7 @@ export interface RegisterUserResponse {
   updated_at: string;
 }
 
-export type ManagedRole = 'GATE_OFFICER' | 'ADMIN';
+export type ManagedRole = 'GATE_OFFICER' | 'PROCTOR' | 'ADMIN';
 
 export interface ManagedUser {
   id: string;
@@ -59,9 +59,11 @@ export interface CreateManagedUserRequest {
 export interface UpdateManagedUserRequest {
   full_name?: string;
   email?: string;
+  phone?: string;
   password?: string;
   role?: ManagedRole;
   is_active?: boolean;
+  department?: string;
 }
 
 export async function searchUsersApi(query: string): Promise<UserSearchResult[]> {

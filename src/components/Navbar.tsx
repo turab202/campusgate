@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Bell, MapPin, LogOut, GraduationCap, UserCheck } from 'lucide-react';
+import { ShieldCheck, Bell, MapPin, LogOut, GraduationCap, UserCheck, ClipboardCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { listIncidentsApi } from '../services/incidentService';
 import { LanguageSelector } from './LanguageSelector';
@@ -7,6 +7,7 @@ import { LanguageSelector } from './LanguageSelector';
 const ROLE_CONFIG = {
   STUDENT: { label: 'Student', icon: GraduationCap, color: 'text-[var(--cg-info)]', bg: 'bg-[var(--cg-info-bg)] border-[var(--cg-info-border)]' },
   OFFICER: { label: 'Gate Officer', icon: UserCheck, color: 'text-[var(--cg-success)]', bg: 'bg-[var(--cg-success-bg)] border-[var(--cg-success-border)]' },
+  PROCTOR: { label: 'Proctor', icon: ClipboardCheck, color: 'text-[var(--cg-info)]', bg: 'bg-[var(--cg-info-bg)] border-[var(--cg-info-border)]' },
   ADMIN: { label: 'Administrator', icon: ShieldCheck, color: 'text-[var(--cg-primary)]', bg: 'bg-[var(--cg-primary-light)] border-[var(--cg-border)]' },
 };
 

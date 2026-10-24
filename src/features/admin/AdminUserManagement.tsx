@@ -31,6 +31,7 @@ export function AdminUserManagement() {
   const [notice, setNotice] = useState<string | null>(null);
   const [editing, setEditing] = useState<ManagedUser | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [userSearch, setUserSearch] = useState('');
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -60,6 +61,8 @@ export function AdminUserManagement() {
       full_name: user.full_name,
       email: user.email,
       role: user.role,
+      phone: user.phone ?? '',
+      department: user.department ?? '',
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -75,6 +78,12 @@ export function AdminUserManagement() {
           full_name: form.full_name.trim(),
           email: form.email.trim(),
           role: form.role,
+          ...(form.phone.trim() && form.phone.trim() !== (editing.phone ?? '')
+            ? { phone: form.phone.trim() }
+            : {}),
+          ...(form.department.trim() && form.department.trim() !== (editing.department ?? '')
+            ? { department: form.department.trim() }
+            : {}),
           ...(form.password ? { password: form.password } : {}),
         };
         await updateManagedUserApi(editing.id, updates);
@@ -89,7 +98,7 @@ export function AdminUserManagement() {
           department: form.department.trim() || null,
           campus_id: form.campus_id.trim() || null,
         });
-        setNotice(`Created ${form.role === 'ADMIN' ? 'administrator' : 'gate officer'} account.`);
+        setNotice(`Created ${form.role === 'ADMIN' ? 'administrator' : form.role === 'PROCTOR' ? 'proctor' : 'gate officer'} account.`);
       }
       resetForm();
       await loadUsers();
@@ -117,6 +126,13 @@ export function AdminUserManagement() {
     }
   };
 
+  const visibleUsers = users.filter((user) => {
+    const query = userSearch.trim().toLocaleLowerCase();
+    if (!query) return true;
+    return [user.full_name, user.email, user.campus_id, user.department, user.role]
+      .some((value) => value?.toLocaleLowerCase().includes(query));
+  });
+
   return (
     <div className="space-y-5">
       <section className="space-y-5 rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] p-5 shadow-[var(--cg-shadow-sm)] sm:p-6">
@@ -126,12 +142,12 @@ export function AdminUserManagement() {
           </div>
           <div>
             <h2 className="text-base font-bold text-[var(--cg-text)]">
-              {editing ? 'Update managed account' : 'Add an administrator or gate officer'}
+            {editing ? 'Update managed account' : 'Add an administrator, gate officer, or proctor'}
             </h2>
             <p className="mt-1 text-sm text-[var(--cg-text-muted)]">
               {editing
                 ? 'Update account details or set a new password. Leave the password blank to keep it unchanged.'
-                : 'Create a privileged account. Use a unique email and a strong password of at least 16 characters.'}
+                : 'Create a privileged account. Proctors require a department assignment; use a strong password of at least 16 characters.'}
             </p>
           </div>
         </div>
@@ -158,6 +174,7 @@ export function AdminUserManagement() {
               onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as ManagedRole }))}
               className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10">
               <option value="GATE_OFFICER">Gate Officer</option>
+              <option value="PROCTOR">Proctor</option>
               <option value="ADMIN">Administrator</option>
             </select>
           </div>
@@ -170,18 +187,40 @@ export function AdminUserManagement() {
                   className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10" />
               </div>
               <div className="space-y-2">
-                <label htmlFor="managed-user-department" className="block text-xs font-semibold text-[var(--cg-text)]">Department <span className="font-normal text-[var(--cg-text-muted)]">(optional)</span></label>
-                <input id="managed-user-department" maxLength={255} value={form.department}
-                  onChange={(event) => setForm((current) => ({ ...current, department: event.target.value }))}
-                  className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10" />
-              </div>
-              <div className="space-y-2">
                 <label htmlFor="managed-user-campus-id" className="block text-xs font-semibold text-[var(--cg-text)]">Campus ID <span className="font-normal text-[var(--cg-text-muted)]">(optional)</span></label>
                 <input id="managed-user-campus-id" maxLength={50} value={form.campus_id}
                   onChange={(event) => setForm((current) => ({ ...current, campus_id: event.target.value }))}
                   className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10" />
               </div>
             </>
+          )}
+          {editing && (
+            <>
+              <div className="space-y-2">
+                <label htmlFor="managed-user-phone-edit" className="block text-xs font-semibold text-[var(--cg-text)]">Phone <span className="font-normal text-[var(--cg-text-muted)]">(optional)</span></label>
+                <input id="managed-user-phone-edit" type="tel" maxLength={50} value={form.phone}
+                  onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
+                  className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="managed-user-department" className="block text-xs font-semibold text-[var(--cg-text)]">
+                  Department {form.role === 'PROCTOR' && <span className="text-[var(--cg-danger)]">*</span>}
+                </label>
+                <input id="managed-user-department" maxLength={255} required={form.role === 'PROCTOR'} value={form.department}
+                  onChange={(event) => setForm((current) => ({ ...current, department: event.target.value }))}
+                  className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10" />
+              </div>
+            </>
+          )}
+          {!editing && (
+            <div className="space-y-2">
+              <label htmlFor="managed-user-department" className="block text-xs font-semibold text-[var(--cg-text)]">
+                Department {form.role === 'PROCTOR' ? <span className="text-[var(--cg-danger)]">*</span> : <span className="font-normal text-[var(--cg-text-muted)]">(optional)</span>}
+              </label>
+              <input id="managed-user-department" maxLength={255} required={form.role === 'PROCTOR'} value={form.department}
+                onChange={(event) => setForm((current) => ({ ...current, department: event.target.value }))}
+                className="h-11 w-full rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3.5 text-sm text-[var(--cg-text)] outline-none transition focus:border-[var(--cg-primary)] focus:ring-2 focus:ring-[var(--cg-primary)]/10" />
+            </div>
           )}
           <div className="space-y-2">
             <label htmlFor="managed-user-password" className="block text-xs font-semibold text-[var(--cg-text)]">
@@ -202,24 +241,29 @@ export function AdminUserManagement() {
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-[var(--cg-border)] bg-[var(--cg-surface)] shadow-[var(--cg-shadow-sm)]">
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--cg-border)] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--cg-border)] p-5">
           <div>
-            <h2 className="text-base font-bold text-[var(--cg-text)]">Administrators and gate officers</h2>
+            <h2 className="text-base font-bold text-[var(--cg-text)]">Administrators, gate officers, and proctors</h2>
             <p className="mt-1 text-sm text-[var(--cg-text-muted)]">Deactivated accounts retain their history and can be reactivated.</p>
           </div>
-          <button type="button" onClick={() => void loadUsers()} disabled={loading} aria-label="Refresh managed accounts" title="Refresh"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--cg-border)] text-[var(--cg-text-muted)] transition-colors hover:bg-[var(--cg-surface-muted)] disabled:opacity-60">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <input type="search" value={userSearch} onChange={(event) => setUserSearch(event.target.value)}
+              placeholder="Find by name, email, ID or department" aria-label="Find a managed account"
+              className="h-10 min-w-0 flex-1 rounded-lg border border-[var(--cg-border)] bg-[var(--cg-surface)] px-3 text-xs outline-none focus:border-[var(--cg-primary)] sm:w-64 sm:flex-none" />
+            <button type="button" onClick={() => void loadUsers()} disabled={loading} aria-label="Refresh managed accounts" title="Refresh"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--cg-border)] text-[var(--cg-text-muted)] transition-colors hover:bg-[var(--cg-surface-muted)] disabled:opacity-60">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {loading ? (
           <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-[var(--cg-primary)]" /></div>
-        ) : users.length === 0 ? (
+        ) : visibleUsers.length === 0 ? (
           <EmptyState title="No managed accounts found" />
         ) : (
           <div className="divide-y divide-[var(--cg-border)]">
-            {users.map((user) => (
+            {visibleUsers.map((user) => (
               <article key={user.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${user.role === 'ADMIN' ? 'bg-[var(--cg-primary-light)] text-[var(--cg-primary)]' : 'bg-[var(--cg-success-bg)] text-[var(--cg-success)]'}`}>
@@ -233,8 +277,9 @@ export function AdminUserManagement() {
                       </span>
                     </div>
                     <p className="mt-1 break-all text-sm text-[var(--cg-text-muted)]">{user.email}</p>
+                    {user.phone && <p className="mt-1 text-xs text-[var(--cg-text-subtle)]">{user.phone}</p>}
                     <p className="mt-1 text-xs text-[var(--cg-text-subtle)]">
-                      {user.role === 'ADMIN' ? 'Administrator' : 'Gate Officer'}
+                      {user.role === 'ADMIN' ? 'Administrator' : user.role === 'PROCTOR' ? 'Proctor' : 'Gate Officer'}
                       {user.campus_id ? ` · ${user.campus_id}` : ''}
                       {user.department ? ` · ${user.department}` : ''}
                     </p>
