@@ -1,6 +1,5 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { AppProvider } from '@/src/context/AppContext';
 
 export const metadata: Metadata = {
   title: 'CampusGate',
@@ -11,7 +10,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="bg-[var(--cg-background)] text-[var(--cg-text)]">
-        <AppProvider>{children}</AppProvider>
+        {children}
       </body>
     </html>
   );

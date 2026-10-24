@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [locale, setLocale] = useState<Locale>(language === 'am' ? 'am' : 'en');
 
   useEffect(() => { setLocale(language === 'am' ? 'am' : 'en'); }, [language]);
-  useEffect(() => { if (isAuthenticated) router.replace('/'); }, [isAuthenticated, router]);
+  useEffect(() => { if (isAuthenticated) router.replace('/dashboard'); }, [isAuthenticated, router]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +33,7 @@ export default function LoginPage() {
     setSubmitting(true);
     const ok = await login(email.trim(), password.trim());
     setSubmitting(false);
-    if (ok) router.push('/');
+    if (ok) router.push('/dashboard');
   };
 
   if (isAuthLoading) return null;
