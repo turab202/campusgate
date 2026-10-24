@@ -12,7 +12,7 @@ The current implementation is a real full-stack application with:
 - a Next.js + React frontend
 - a FastAPI + SQLAlchemy backend
 - PostgreSQL persistence with Alembic migrations
-- role-based access control for students, gate officers, and administrators
+- role-based access control for students, gate officers, proctors, and administrators
 
 This repository is not a mock demo-only project. It uses the actual backend APIs and database models for device movement, gate assignment, visitor management, lost-device handling, incidents, and audit logging.
 
@@ -55,7 +55,7 @@ INSIDE_CAMPUS
 - React 19
 - TypeScript
 - Tailwind-based design system
-- Role-aware dashboards for students, officers, and admins
+- Role-aware dashboards for students, officers, proctors, and admins
 
 ### Backend
 
@@ -111,11 +111,21 @@ PostgreSQL database
 
 ### Visitor management
 
-- Students and staff submit visitor requests for their own accounts.
+- Existing student/staff visitor APIs and records remain available; the Student Portal no longer exposes a Visitor Requests workflow.
 - Administrators approve or reject pending requests; approval generates a visitor QR pass.
 - Gate officers verify the approved QR value at their assigned gate before check-in, then record check-out.
-- Hosts can review their requests and show approved visitor passes from the student portal.
+- Existing host-scoped request and pass APIs remain available to authorized clients.
 - Requests, approvals, and gate movements are audit logged; hosts can only view their own requests.
+
+### Belongings Exit Clearance
+
+- Students submit an exit-only request with residence, intended exit time, and declared item quantities. Student identity comes from the authenticated account; entry screening and device movement remain unchanged.
+- Admins create and manage Proctor accounts. Each proctor is assigned a department and may review requests for students in that department.
+- Proctors approve or reject pending requests. Approval issues a signed opaque QR pass; rejection requires a reason. Students can cancel pending requests and review the decision and pass usage state.
+- Gate Officers scan the QR pass or enter its request reference, verify student identity and belongings, then explicitly record the exit. Looking up a pass does not consume it.
+- Pass use is single-use and transactionally guarded. A discrepancy revokes the pass, creates an incident, and is audit logged.
+- Pass validity defaults to 24 hours after the intended exit time and is configurable through `CLEARANCE_PASS_VALIDITY_HOURS`.
+- This workflow is not the removed Temporary Exit Request feature and does not add a belongings declaration to campus entry.
 
 ### Incident management
 
@@ -138,6 +148,8 @@ The project uses backend authorization as the source of truth.
 - View their own device movement history
 - Use student-facing device actions
 - Update their sign-in email and password from the Account section after confirming their current password
+- Students can submit and review their own belongings exit requests and cancel requests while pending
+- Students can display the digital QR pass after proctor approval
 
 ### Gate officer
 
@@ -145,11 +157,20 @@ The project uses backend authorization as the source of truth.
 - Perform check-in/check-out actions
 - View gate-related movement data
 - Handle visitor and incident workflows as allowed by backend permissions
+- Validate belongings clearance passes at the assigned gate and record exits or discrepancies
+
+### Proctor
+
+- Sign in to the dedicated Proctor Portal
+- Review, search, approve, or reject pending requests within the assigned department
+- View processed requests and decision details for that department
+- Proctors cannot manage accounts, gate assignments, devices, or administrative records
 
 ### Administrator
 
 - Manage devices, gates, gate assignments, incidents, visitors, and audit logs
-- Create and update administrator and gate officer accounts, reset passwords, and deactivate/reactivate accounts
+- Create and update administrator, gate officer, and proctor accounts, reset passwords, and deactivate/reactivate accounts
+- Assign proctors to a department and review clearance records in a read-only oversight view
 - Review security and operational telemetry
 
 Privileged account deactivation preserves audit history. The last active administrator and the current administrator's own account cannot be deactivated or demoted.
@@ -191,11 +212,16 @@ DATABASE_URL=postgresql+psycopg://campusgate:campusgate_dev_password@localhost:5
 JWT_SECRET_KEY=replace-with-a-long-random-secret
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+CLEARANCE_PASS_VALIDITY_HOURS=24
+# Optional; in production prefer a separate persistent random secret of at least 32 bytes.
+CLEARANCE_TOKEN_SECRET=replace-with-a-separate-random-secret
 ```
 
 The access token and its HttpOnly browser cookie expire after this interval. The default is 60 minutes; there is no automatic token refresh, so users must sign in again when it expires. The frontend returns to the sign-in page and explains this when an API request receives an expired-session response. Increase this value in the backend deployment environment only if a longer session is appropriate for your device-security policy.
 
 If you connect to a managed PostgreSQL service instead of the Docker local database, replace the URL with the correct connection string.
+
+`CLEARANCE_PASS_VALIDITY_HOURS` controls pass expiry from the requested exit time and defaults to 24. Set a positive value appropriate for university policy. `CLEARANCE_TOKEN_SECRET` is optional; when omitted the backend derives the QR-token signing key from `JWT_SECRET_KEY`. Keep a separately configured value stable across backend instances so issued passes remain verifiable.
 
 For production, set `ENVIRONMENT=production` and use a unique randomly generated `JWT_SECRET_KEY`. The default CORS origin is `https://campusgate-omega.vercel.app`; set `CORS_ORIGINS` to a JSON array of exact HTTPS origins if you use another frontend domain. API documentation endpoints are disabled in production.
 
@@ -272,6 +298,7 @@ From the repository root:
 ```bash
 npx tsc --noEmit
 npm run build
+npm run lint
 ```
 
 From the backend directory:
@@ -281,9 +308,11 @@ From the backend directory:
 .\.venv\Scripts\python.exe -m alembic check
 ```
 
+The belongings-clearance API tests use an isolated in-memory SQLite database. Existing PostgreSQL-dependent integration/model tests skip if local PostgreSQL is unavailable. The frontend has no separate unit-test script; lint, TypeScript checking, and the production build are its automated checks.
+
 ## Current repository status
 
-This codebase currently focuses on the real device gate workflow and related operational systems:
+This codebase supports real device and belongings-exit gate workflows and related operational systems:
 
 - device registration and ownership
 - gate officer check-in/check-out
@@ -293,14 +322,35 @@ This codebase currently focuses on the real device gate workflow and related ope
 - incident tracking
 - audit and operational telemetry
 
-It intentionally does not include a separate temporary exit request feature.
+It intentionally does not restore the removed Temporary Exit Request feature.
 
 ## Notes
 
 - Backend authorization is the security boundary; frontend hiding is not a substitute for real RBAC.
 - Gate assignments remain authoritative for active gate detection.
-- Device movement status changes happen through the real check-in/check-out flow.
-- The system is meant to support an operational gate-book replacement rather than a separate approval workflow.
+- Device movement status changes happen through the real device check-in/check-out flow. Belongings clearance is a separate exit-only approval workflow and does not affect device status or campus entry.
+- Visitor APIs remain available to authorized staff even though the student-facing Visitor Requests section is no longer in the Student Portal.
+
+## Safe deployment of belongings clearance
+
+The feature adds incremental Alembic revision `9c48b2a7d301`. It adds the `PROCTOR` PostgreSQL enum value and creates clearance and item tables without dropping or recreating existing production tables.
+
+1. Back up the Neon database and apply the migration to staging first.
+2. Run `alembic upgrade head` from the backend release environment using the same `DATABASE_URL` as the API. Do not downgrade production after clearance requests are created; downgrade removes the new tables and their records.
+3. Configure `CLEARANCE_PASS_VALIDITY_HOURS` and, preferably, a persistent random `CLEARANCE_TOKEN_SECRET` of at least 32 bytes on every backend instance. Keep database credentials, JWT secrets, and pass-signing secrets out of source control.
+4. Deploy the backend and frontend with the existing Render/Vercel environment-variable setup. `BACKEND_API_URL` must point to the FastAPI service; the Next.js same-origin API proxy and HttpOnly session cookie remain in use. No separate deployment manifest or new package dependency is required.
+5. Verify health, login, and protected operations before enabling the workflow for users. Local validation is not a substitute for deployed end-to-end verification.
+
+### Production end-to-end checklist
+
+- Admin creates a department-assigned Proctor; the account can sign in, while a deactivated proctor is denied API access.
+- A student creates a request with multiple items; student identity comes from auth and another student cannot read the request.
+- A proctor in the assigned department approves the request and the student sees the QR pass; an out-of-department proctor cannot read or decide it.
+- Rejection reason and pending cancellation are visible; approved requests cannot be cancelled or altered.
+- A Gate Officer scans the pass or looks up its reference at their assigned gate; lookup alone does not mark it used.
+- After identity and belongings checks, one exit action records the officer, assigned gate, timestamp, and audit event. A second use is refused.
+- Expired, revoked, rejected, forged, or already-used passes are refused. A discrepancy creates an incident and does not record a successful exit.
+- Campus entry and existing device check-in/check-out workflows continue unchanged.
 
 ## Project goals
 
