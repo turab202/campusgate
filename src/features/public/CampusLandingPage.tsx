@@ -499,14 +499,14 @@ export function CampusLandingPage() {
           </div>
         </section>
 
-        <section aria-labelledby="technology-title" className="mx-auto grid max-w-7xl gap-8 px-5 py-14 sm:px-8 sm:py-16 lg:grid-cols-[0.7fr_1.3fr] lg:items-center">
+        <section aria-labelledby="technology-title" className="mx-auto max-w-7xl space-y-6 px-5 py-14 sm:px-8 sm:py-16">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--cg-primary)]">Technology</p>
             <h2 id="technology-title" className="mt-3 text-2xl font-semibold tracking-[-0.04em]">Built on a modern full-stack foundation.</h2>
           </div>
-          <ul aria-label="Technologies used" className="flex flex-wrap gap-2">
+          <ul aria-label="Technologies used" className="flex w-full flex-nowrap gap-2 overflow-x-auto pb-2">
             {technologies.map((technology) => (
-              <li key={technology} className="rounded-lg border border-[var(--cg-border)] bg-white px-3.5 py-2 text-sm font-medium text-[var(--cg-text-muted)]">{technology}</li>
+              <li key={technology} className="shrink-0 rounded-lg border border-[var(--cg-border)] bg-white px-3.5 py-2 text-sm font-medium text-[var(--cg-text-muted)]">{technology}</li>
             ))}
           </ul>
         </section>
