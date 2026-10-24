@@ -69,5 +69,9 @@ def require_gate_officer():
     return require_roles(UserRole.GATE_OFFICER)
 
 
+def require_proctor():
+    return require_roles(UserRole.PROCTOR)
+
+
 def require_admin():
     return require_roles(UserRole.ADMIN)

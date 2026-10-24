@@ -86,17 +86,25 @@ class ManagedUserCreate(BaseModel):
     @field_validator("role")
     @classmethod
     def privileged_role_only(cls, value: UserRole) -> UserRole:
-        if value not in (UserRole.GATE_OFFICER, UserRole.ADMIN):
-            raise ValueError("Managed accounts must be ADMIN or GATE_OFFICER")
+        if value not in (UserRole.GATE_OFFICER, UserRole.PROCTOR, UserRole.ADMIN):
+            raise ValueError("Managed accounts must be ADMIN, GATE_OFFICER, or PROCTOR")
         return value
+
+    @model_validator(mode="after")
+    def proctors_need_a_department(self):
+        if self.role == UserRole.PROCTOR and not (self.department and self.department.strip()):
+            raise ValueError("Proctor accounts must be assigned a department")
+        return self
 
 
 class ManagedUserUpdate(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=255)
     email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=50)
     role: UserRole | None = None
     is_active: bool | None = None
     password: str | None = Field(default=None, min_length=16, max_length=72)
+    department: str | None = Field(default=None, max_length=255)
 
     @field_validator("full_name")
     @classmethod
@@ -117,8 +125,8 @@ class ManagedUserUpdate(BaseModel):
     @field_validator("role")
     @classmethod
     def updated_privileged_role_only(cls, value: UserRole | None) -> UserRole | None:
-        if value is not None and value not in (UserRole.GATE_OFFICER, UserRole.ADMIN):
-            raise ValueError("Managed accounts must be ADMIN or GATE_OFFICER")
+        if value is not None and value not in (UserRole.GATE_OFFICER, UserRole.PROCTOR, UserRole.ADMIN):
+            raise ValueError("Managed accounts must be ADMIN, GATE_OFFICER, or PROCTOR")
         return value
 
     @model_validator(mode="after")
@@ -127,6 +135,10 @@ class ManagedUserUpdate(BaseModel):
             raise ValueError("At least one field must be provided")
         if any(getattr(self, field) is None for field in self.model_fields_set):
             raise ValueError("Updated fields cannot be null")
+        if self.department is not None and not self.department.strip():
+            raise ValueError("department must not be blank")
+        if self.phone is not None and not self.phone.strip():
+            raise ValueError("phone must not be blank")
         return self
 
 

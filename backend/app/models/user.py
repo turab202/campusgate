@@ -30,3 +30,8 @@ class User(Base):
     movements_processed: Mapped[list["DeviceMovement"]] = relationship("DeviceMovement", back_populates="officer")
     incidents_reported: Mapped[list["Incident"]] = relationship("Incident", back_populates="reporter")
     audit_logs: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="actor")
+    belongings_clearances: Mapped[list["BelongingsExitClearance"]] = relationship(
+        "BelongingsExitClearance",
+        back_populates="student",
+        foreign_keys="BelongingsExitClearance.student_id",
+    )

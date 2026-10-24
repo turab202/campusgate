@@ -5,6 +5,7 @@ class UserRole(str, enum.Enum):
     STUDENT = "STUDENT"
     STAFF = "STAFF"
     GATE_OFFICER = "GATE_OFFICER"
+    PROCTOR = "PROCTOR"
     ADMIN = "ADMIN"
 
 
@@ -59,4 +60,10 @@ class VisitStatus(str, enum.Enum):
     EXPIRED = "EXPIRED"
     CANCELLED = "CANCELLED"
 
+
+class BelongingsClearanceStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    CANCELLED = "CANCELLED"
 

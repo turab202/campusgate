@@ -62,7 +62,7 @@ def list_managed_users(
 ):
     return db.execute(
         select(User)
-        .where(User.role.in_((UserRole.GATE_OFFICER, UserRole.ADMIN)))
+        .where(User.role.in_((UserRole.GATE_OFFICER, UserRole.PROCTOR, UserRole.ADMIN)))
         .order_by(User.role, User.full_name)
     ).scalars().all()
 
@@ -71,7 +71,7 @@ def list_managed_users(
     "/managed",
     response_model=UserRegistrationRead,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a gate officer or administrator",
+    summary="Create a gate officer, proctor, or administrator",
 )
 def create_managed_user(
     body: ManagedUserCreate,
@@ -91,7 +91,7 @@ def create_managed_user(
             full_name=body.full_name,
             email=email,
             phone=body.phone,
-            department=body.department,
+            department=body.department.strip() if body.department else None,
             password_hash=hash_password(body.password),
             role=body.role,
             campus_id=body.campus_id.strip() if body.campus_id else None,
@@ -129,7 +129,7 @@ def update_managed_user(
 ):
     db.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": _ADMIN_ACCOUNT_LOCK_ID})
     user = db.get(User, user_id)
-    if user is None or user.role not in (UserRole.GATE_OFFICER, UserRole.ADMIN):
+    if user is None or user.role not in (UserRole.GATE_OFFICER, UserRole.PROCTOR, UserRole.ADMIN):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Managed account not found")
 
     changes = body.model_dump(exclude_unset=True)
@@ -142,6 +142,12 @@ def update_managed_user(
         )
 
     next_role = changes.get("role", user.role)
+    next_department = changes.get("department", user.department)
+    if next_role == UserRole.PROCTOR and not (next_department and next_department.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Proctor accounts must be assigned a department",
+        )
     next_active = changes.get("is_active", user.is_active)
     if user.is_active and user.role == UserRole.ADMIN and (
         next_role != UserRole.ADMIN or not next_active
@@ -172,6 +178,8 @@ def update_managed_user(
         if duplicate:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
         changes["email"] = normalized_email
+    if "department" in changes:
+        changes["department"] = changes["department"].strip()
 
     password = changes.pop("password", None)
     if password is not None:
