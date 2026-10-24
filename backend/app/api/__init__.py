@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.api.routes import (
     audit_logs,
     auth,
+    belongings_clearances,
     devices,
     gate_assignments,
     gates,
@@ -17,6 +18,7 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router)
 api_router.include_router(auth.router)
 api_router.include_router(users.router)
+api_router.include_router(belongings_clearances.router)
 api_router.include_router(devices.router)
 api_router.include_router(lost_device.router)
 api_router.include_router(movements.router)

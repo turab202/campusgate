@@ -22,6 +22,34 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     BOOTSTRAP_SECRET: str | None = None
+    CLEARANCE_TOKEN_SECRET: str | None = None
+    CLEARANCE_PASS_VALIDITY_HOURS: int = 24
+
+    @field_validator("CLEARANCE_PASS_VALIDITY_HOURS")
+    @classmethod
+    def clearance_pass_validity_must_be_positive(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("CLEARANCE_PASS_VALIDITY_HOURS must be positive")
+        return value
+
+    @field_validator("CLEARANCE_TOKEN_SECRET", mode="before")
+    @classmethod
+    def clearance_token_secret_must_be_strong(cls, secret: str | None, info) -> str | None:
+        if secret == "":
+            return None
+        if (
+            secret is not None
+            and info.data.get("ENVIRONMENT", "development").lower() == "production"
+            and (
+                len(secret.encode("utf-8")) < 32
+                or secret.startswith("<")
+                or "replace-with" in secret.lower()
+            )
+        ):
+            raise ValueError(
+                "production CLEARANCE_TOKEN_SECRET must be a non-placeholder secret of at least 32 bytes"
+            )
+        return secret
 
     @model_validator(mode="before")
     @classmethod
