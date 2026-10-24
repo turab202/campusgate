@@ -1,5 +1,10 @@
 # CampusGate
 
+## Project owner
+
+- Name: Zahra Mustefa
+- Role: Full project developer and owner
+
 CampusGate is a university gate and device security platform that replaces the manual gate-book process with a digital, auditable workflow.
 
 The current implementation is a real full-stack application with:
