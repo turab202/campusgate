@@ -130,12 +130,17 @@ const technologies = [
 
 function Wordmark() {
   return (
-    <Link href="/" aria-label="CampusGate home" className="inline-flex items-center gap-2.5">
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--cg-primary)] text-white">
-        <ShieldCheck aria-hidden="true" className="h-5 w-5" />
+    <Link href="/" aria-label="CampusGate home" className="inline-flex min-w-0 items-center gap-2.5">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--cg-primary)] text-white shadow-[var(--cg-shadow-xs)]">
+        <ShieldCheck aria-hidden="true" className="h-4 w-4" />
       </span>
-      <span className="text-lg font-bold tracking-[-0.04em] text-[var(--cg-text)]">
-        CampusGate
+      <span className="min-w-0">
+        <span className="block text-sm font-bold leading-4 tracking-tight text-[var(--cg-text)]">
+          CampusGate
+        </span>
+        <span className="mt-0.5 hidden text-[9px] font-semibold uppercase leading-3 tracking-[0.1em] text-[var(--cg-text-muted)] sm:block">
+          University Access &amp; Security Management
+        </span>
       </span>
     </Link>
   );
@@ -151,7 +156,7 @@ export function CampusLandingPage() {
         Skip to content
       </a>
       <header className="border-b border-[var(--cg-border)] bg-[var(--cg-surface)]">
-        <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between gap-5 px-5 py-3 sm:px-8">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:gap-5 sm:px-6 lg:px-8">
           <Wordmark />
           <nav aria-label="Main navigation" className="hidden items-center gap-7 md:flex">
             <a className="text-sm font-medium text-[var(--cg-text-muted)] transition-colors hover:text-[var(--cg-primary)]" href="#platform">Platform</a>
@@ -161,7 +166,7 @@ export function CampusLandingPage() {
           </nav>
           <Link
             href="/login"
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--cg-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)]"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--cg-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)] sm:h-10 sm:px-4 sm:text-sm"
           >
             Sign in <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
@@ -187,13 +192,13 @@ export function CampusLandingPage() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a
                   href="#platform"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--cg-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)]"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--cg-primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--cg-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)]"
                 >
                   Explore features <ArrowDown aria-hidden="true" className="h-4 w-4" />
                 </a>
                 <Link
                   href="/login"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-[var(--cg-border-strong)] bg-white px-5 text-sm font-semibold text-[var(--cg-text)] transition-colors hover:border-[var(--cg-primary)] hover:text-[var(--cg-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)]"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--cg-border-strong)] bg-white px-5 text-sm font-semibold text-[var(--cg-text)] transition-colors hover:border-[var(--cg-primary)] hover:text-[var(--cg-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cg-primary)]"
                 >
                   Sign in to CampusGate <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
                 </Link>
