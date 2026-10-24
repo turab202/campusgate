@@ -14,7 +14,7 @@ The current implementation is a real full-stack application with:
 - PostgreSQL persistence with Alembic migrations
 - role-based access control for students, gate officers, proctors, and administrators
 
-This repository is not a mock demo-only project. It uses the actual backend APIs and database models for device movement, gate assignment, visitor management, lost-device handling, incidents, and audit logging.
+This repository is not a mock demo-only project. It uses the actual backend APIs and database models for device movement, gate assignment, visitor management, lost-device handling, Student Belongings Exit Clearance, incidents, and audit logging.
 
 ## Product focus
 
@@ -29,7 +29,7 @@ The system is designed around the real university gate process:
 7. The device status becomes INSIDE_CAMPUS.
 8. Each movement is recorded with officer, gate, device, and timestamp.
 
-There is no temporary device exit approval workflow in the current product direction. The real movement lifecycle remains authoritative and separate from any future administrative processes.
+Device movement remains its own check-in/check-out lifecycle. Student Belongings Exit Clearance is a separate, implemented approval workflow for taking declared personal belongings out of campus; it does not authorize device movement or change entry screening.
 
 ## Core workflow
 
@@ -45,6 +45,20 @@ OUTSIDE_CAMPUS
 CHECK IN
      ↓
 INSIDE_CAMPUS
+```
+
+Student belongings exit clearance follows a separate approval path:
+
+```text
+STUDENT SUBMITS DECLARED BELONGINGS
+              ↓
+DEPARTMENT PROCTOR APPROVES OR REJECTS
+              ↓
+SIGNED, TIME-LIMITED QR PASS
+              ↓
+GATE OFFICER VERIFIES IDENTITY AND ITEMS
+              ↓
+SINGLE-USE, AUDIT-RECORDED EXIT
 ```
 
 ## Real system components
@@ -76,6 +90,7 @@ Backend (FastAPI)
    ├── devices
    ├── gate assignments
    ├── movements
+   ├── belongings clearance / Proctor review
    ├── lost device workflow
    ├── visitors / visits
    ├── incidents
@@ -85,6 +100,25 @@ PostgreSQL database
 ```
 
 ## Main features implemented
+
+### Student Belongings Exit Clearance — standout feature
+
+Paper-based exit clearance can require a student to visit a Proctor's office, fill out a paper form listing clothes, shoes, and other belongings, then carry the permit to a campus gate. CampusGate digitizes this process while retaining a human review and an in-person gate check.
+
+```text
+STUDENT                 PROCTOR                         GATE OFFICER
+Submit exit request  →  Review within department  →  Scan QR or look up reference
+Declare items           Approve or reject             Confirm identity and compare items
+Receive approved pass                                  Record exit or flag discrepancy
+```
+
+- Students submit the exit request online with residence, intended exit time, remarks, and item names and quantities. The authenticated account supplies the student's identity and department.
+- Admins create and manage Proctor accounts, assign each Proctor a department, and can deactivate accounts. Proctors may access and decide only requests matching their assigned department.
+- A Proctor approves or rejects a pending request; rejection requires a reason. Approval issues a signed QR pass. Students can cancel pending requests and review decisions and pass state.
+- At their assigned gate, Gate Officers scan the QR pass or manually look up its request reference. They review the approved declaration, explicitly confirm that they checked the student's identity and compared the belongings, then record the exit. A discrepancy can instead revoke the pass and create an incident.
+- The approved QR token is signed and validated by the backend. Passes expire at the intended exit time plus `CLEARANCE_PASS_VALIDITY_HOURS` (default 24 hours). A configured `CLEARANCE_TOKEN_SECRET` should remain stable across backend instances; otherwise the signing key is derived from `JWT_SECRET_KEY`.
+- Exit recording locks the clearance row and is single-use. The system records the officer, assigned gate, exit time, and identity-verification confirmation. Creation, decisions, validation failures, exit attempts, successful exits, and discrepancies are audit logged.
+- This is an exit-only belongings workflow. Normal campus entry screening is unchanged: students do not register clothes or belongings when entering. Device check-in/check-out remains separate and unchanged.
 
 ### Device lifecycle
 
@@ -117,16 +151,6 @@ PostgreSQL database
 - Existing host-scoped request and pass APIs remain available to authorized clients.
 - Requests, approvals, and gate movements are audit logged; hosts can only view their own requests.
 
-### Belongings Exit Clearance
-
-- Students submit an exit-only request with residence, intended exit time, and declared item quantities. Student identity comes from the authenticated account; entry screening and device movement remain unchanged.
-- Admins create and manage Proctor accounts. Each proctor is assigned a department and may review requests for students in that department.
-- Proctors approve or reject pending requests. Approval issues a signed opaque QR pass; rejection requires a reason. Students can cancel pending requests and review the decision and pass usage state.
-- Gate Officers scan the QR pass or enter its request reference, verify student identity and belongings, then explicitly record the exit. Looking up a pass does not consume it.
-- Pass use is single-use and transactionally guarded. A discrepancy revokes the pass, creates an incident, and is audit logged.
-- Pass validity defaults to 24 hours after the intended exit time and is configurable through `CLEARANCE_PASS_VALIDITY_HOURS`.
-- This workflow is not the removed Temporary Exit Request feature and does not add a belongings declaration to campus entry.
-
 ### Incident management
 
 - Gate officers create incidents associated with their active gate and, when applicable, a registered device.
@@ -142,14 +166,19 @@ PostgreSQL database
 
 The project uses backend authorization as the source of truth.
 
-### Student / staff
+### Student
 
 - View their own devices
 - View their own device movement history
 - Use student-facing device actions
 - Update their sign-in email and password from the Account section after confirming their current password
-- Students can submit and review their own belongings exit requests and cancel requests while pending
-- Students can display the digital QR pass after proctor approval
+- Submit and review their belongings exit requests, and cancel requests while pending
+- View the declared items and decision, and display an approved digital QR pass
+
+### Staff
+
+- Use the shared student-facing device portal and view devices associated with their account
+- Student Belongings Exit Clearance request endpoints are restricted to the `STUDENT` role
 
 ### Gate officer
 
@@ -157,12 +186,14 @@ The project uses backend authorization as the source of truth.
 - Perform check-in/check-out actions
 - View gate-related movement data
 - Handle visitor and incident workflows as allowed by backend permissions
-- Validate belongings clearance passes at the assigned gate and record exits or discrepancies
+- Validate signed belongings clearance passes or look up a request reference at the assigned gate
+- Compare declared items and verify student identity before recording a single-use exit; flag discrepancies when needed
 
 ### Proctor
 
+- Admin-created, department-assigned role; public self-registration cannot grant `PROCTOR`
 - Sign in to the dedicated Proctor Portal
-- Review, search, approve, or reject pending requests within the assigned department
+- Search and review requests for students in the assigned department; approve or reject pending requests
 - View processed requests and decision details for that department
 - Proctors cannot manage accounts, gate assignments, devices, or administrative records
 
@@ -170,7 +201,7 @@ The project uses backend authorization as the source of truth.
 
 - Manage devices, gates, gate assignments, incidents, visitors, and audit logs
 - Create and update administrator, gate officer, and proctor accounts, reset passwords, and deactivate/reactivate accounts
-- Assign proctors to a department and review clearance records in a read-only oversight view
+- Assign each Proctor to a department and review belongings clearance records in a read-only oversight view
 - Review security and operational telemetry
 
 Privileged account deactivation preserves audit history. The last active administrator and the current administrator's own account cannot be deactivated or demoted.
@@ -314,6 +345,7 @@ The belongings-clearance API tests use an isolated in-memory SQLite database. Ex
 
 This codebase supports real device and belongings-exit gate workflows and related operational systems:
 
+- Student Belongings Exit Clearance: online student request, department Proctor decision, signed QR pass, and audited Gate Officer exit
 - device registration and ownership
 - gate officer check-in/check-out
 - active gate assignment
@@ -322,7 +354,7 @@ This codebase supports real device and belongings-exit gate workflows and relate
 - incident tracking
 - audit and operational telemetry
 
-It intentionally does not restore the removed Temporary Exit Request feature.
+Belongings clearance is the implemented exit approval for declared personal items. It does not restore the removed Temporary Exit Request feature or alter device movement and campus-entry workflows.
 
 ## Notes
 
